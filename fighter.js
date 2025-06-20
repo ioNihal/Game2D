@@ -37,7 +37,7 @@ export default class Fighter {
                 }
             }
 
-            if ((input.isKeyDown('ArrowUp') || input.isKeyDown('KeyW') && this.onGround)) {
+            if ((input.isKeyDown('ArrowUp') || input.isKeyDown('KeyW')) && this.onGround) {
                 this.vy = CONFIG.jumpVelocity;
                 this.onGround = false;
                 this.state = 'jump';
