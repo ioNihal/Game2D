@@ -175,7 +175,7 @@ export default class Fighter {
                     //set in processState
                     break;
                 case 'jump_rise':
-                    this.vt = CONFIG.jumpVelocity;
+                    this.vy = CONFIG.jumpVelocity;
                     this.onGround = false;
                     break;
                 case 'jump_fall':
