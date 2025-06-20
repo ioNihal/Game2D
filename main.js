@@ -1,6 +1,7 @@
 import InputHandler from "./input.js";
 import Fighter from "./fighter.js";
 import { CONFIG } from "./config.js";
+import { ATTACKS } from "./attack.js";
 
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 450;
@@ -19,6 +20,7 @@ const player = new Fighter({
     width: 40,
     height: 80,
     color: 'white',
+    attacks: ATTACKS
 });
 
 //for testing
@@ -28,7 +30,10 @@ const enemy = new Fighter({
     width: 40,
     height: 80,
     color: 'red',
+    attacks: ATTACKS
 })
+
+const hitBoxes = [];
 
 const drawPressedKeys = () => {
     ctx.fillStyle = 'white';
@@ -49,16 +54,6 @@ const drawGround = () => {
 
 
 
-
-
-
-
-
-
-
-
-
-
 const clearScreen = () => {
     ctx.fillStyle = '#444';
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -73,8 +68,6 @@ const drawTest = () => {
 const gameLoop = () => {
     clearScreen();
     
-    drawPressedKeys();
-
     player.update(input);
 
     enemy.update(null);
@@ -90,6 +83,9 @@ const gameLoop = () => {
     ctx.fillText(`Player State: ${player.state}`, 10, 20);
     ctx.fillText(`Player POS: (${player.x.toFixed(1)}, ${player.y.toFixed(1)})`, 10,40);
 
+
+    input.update();
+    
     requestAnimationFrame(gameLoop);
 }
 

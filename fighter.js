@@ -1,7 +1,8 @@
 import { CONFIG } from './config.js';
+import { AnimationController, ANIMATIONS } from './animation.js';
 
 export default class Fighter {
-    constructor({ x, y, width, height, color }) {
+    constructor({ x, y, width, height, color, attacks = [] }) {
         this.x = x;
         this.y = y;
         this.width = width;
@@ -17,38 +18,236 @@ export default class Fighter {
         //state
         this.state = 'idle'; //walk and jump also
         this.facingRight = true;
+
+        //timers
+        this.stateTimer = 0;
+        this.stunTimer = 0;
+        this.attackCooldown = 0;
+
+        //attack definitions
+        this.attacks = attacks;
+        this.currentAttack = null;
+
+        //Anim Controller
+        this.animController = new AnimationController(ANIMATIONS);
     }
 
     update(input) {
-        this.vx = 0;
-
-        if (input) {
-            if (input.isKeyDown('ArrowLeft') || input.isKeyDown('KeyA')) {
-                this.vx = -CONFIG.walkSpeed;
-                this.facingRight = false;
-                this.state = 'walk';
-            } else if (input.isKeyDown('ArrowRight') || input.isKeyDown('KeyD')) {
-                this.vx = CONFIG.walkSpeed;
-                this.facingRight = true;
-                this.state = 'walk';
-            } else {
-                if (this.onGround) {
-                    this.state = 'idle';
-                }
-            }
-
-            if ((input.isKeyDown('ArrowUp') || input.isKeyDown('KeyW')) && this.onGround) {
-                this.vy = CONFIG.jumpVelocity;
-                this.onGround = false;
-                this.state = 'jump';
-            }
+        //decre timers
+        if (this.stunTimer > 0) {
+            this.stunTimer--;
         }
 
+        if (this.attackCooldown > 0) {
+            this.attackCooldown--;
+        }
 
-        //gravity
+        //State transtition: inputonly if not hitstun
+        if (this.stunTimer > 0) {
+            this.enterState('hitstun');
+        } else {
+            this.processState(input);
+        }
+
+        //apply physics
+        this.applyPhysics();
+
+        this.updateAnimation(); //based on state
+    }
+
+
+    processState(input) {
+        switch (this.state) {
+            case 'idle':
+                this.vx = 0;
+                if (input) {
+                    if (input.isKeyDown('ArrowLeft') || input.isKeyDown('KeyA')) {
+                        this.facingRight = false;
+                        this.enterState('walk');
+                        return;
+                    }
+                    if (input.isKeyDown('ArrowRight') || input.isKeyDown('KeyD')) {
+                        this.facingRight = true;
+                        this.enterState('walk');
+                        return;
+                    }
+
+                    //jump
+                    if ((input.isKeyJustPressed('ArrowUp') || input.isKeyJustPressed('KeyW')) && this.onGround) {
+                        this.enterState('jump_rise');
+                        return;
+                    }
+
+                    //attack
+                    if (input.isKeyJustPressed('KeyJ') && this.attackCooldown === 0) {
+                        this.startAttack('lightPunch');
+                        return;
+                    }
+                }
+                break;
+
+            case 'walk':
+                if (input) {
+                    if (input.isKeyDown('ArrowLeft') || input.isKeyDown('KeyA')) {
+                        this.vx = -CONFIG.walkSpeed;
+                        this.facingRight = false;
+                    } else if (input.isKeyDown('ArrowRight') || input.isKeyDown('KeyD')) {
+                        this.vx = CONFIG.walkSpeed;
+                        this.facingRight = true;
+                    } else {
+                        this.enterState('idle');
+                        return;
+                    }
+
+                    //jump from walk
+                    if ((input.isKeyJustPressed('ArrowUp') || input.isKeyJustPressed('KeyW')) && this.onGround) {
+                        this.enterState('jump_rise');
+                        return;
+                    }
+
+                    //attack from walk
+                    if (input.isKeyJustPressed('KeyJ') && this.attackCooldown === 0) {
+                        this.startAttack('lightPunch');
+                        return;
+                    }
+                }
+                break;
+
+            case 'jump_rise':
+                if (this.vy >= 0) {
+                    this.enterState('jump_fall');
+                    return;
+                }
+
+                //air attack
+                if (input && input.isKeyJustPressed('KeyJ') && this.attackCooldown === 0) {
+                    this.startAttack('airPunch');
+                    return;
+                }
+
+                break;
+
+            case 'jump_fall':
+                if (input) {
+                    if (input.isKeyDown('ArrowLeft') || input.isKeyDown('KeyA')) {
+                        this.vx = -CONFIG.walkSpeed;
+                        this.facingRight = false;
+                    } else if (input.isKeyDown('ArrowRight') || input.isKeyDown('KeyD')) {
+                        this.vx = CONFIG.walkSpeed;
+                        this.facingRight = true;
+                    }
+
+                    //air attack while falling
+                    if (input.isKeyJustPressed('KeyJ') && this.attackCooldown === 0) {
+                        this.startAttack('airPunch');
+                        return;
+                    }
+                }
+                break;
+            case 'attack_startup':
+            case 'attack_active':
+            case 'attack_recovery':
+                this.handleAttackState();
+                break;
+
+            case 'hitstun':
+                this.vx = 0;
+                break;
+
+            //other state block, knockdown,etc..
+
+            default:
+                this.enterState('idle');
+                break;
+        }
+    }
+
+    enterState(newState) {
+        if (this.state !== newState) {
+            this.state = newState;
+            this.stateTimer = 0;
+
+            switch (newState) {
+                case 'idle':
+                    this.vx = 0;
+                    break;
+                case 'walk':
+                    //set in processState
+                    break;
+                case 'jump_rise':
+                    this.vt = CONFIG.jumpVelocity;
+                    this.onGround = false;
+                    break;
+                case 'jump_fall':
+                    break;
+                case 'attack_startup':
+                    this.stateTimer = 0;
+                    this.hitBoxSpawned = false;
+                    break;
+                case 'hitstun':
+                    //in processstate
+                    break;
+            }
+        }
+    }
+
+    startAttack(attackName) {
+        const atk = this.attacks.find(a => a.name === attackName);
+        if (!atk) {
+            console.warn('Attack not found', attackName);
+            return;
+        }
+
+        this.currentAttack = atk;
+        this.enterState('attack_startup');
+    }
+
+
+    handleAttackState() {
+        this.stateTimer++;
+        const atk = this.currentAttack;
+        if (!atk) return this.enterState('idle');
+
+        if (this.state === 'attack_startup') {
+            if (this.stateTimer >= atk.startup) {
+                this.enterState('attack_active');
+            }
+        } else if (this.state === 'attack_active') {
+            //spawn hitbox
+            if (!this.hitBoxSpawned && this.stateTimer >= atk.hitFrame) {
+                this.spawnHitbox(atk);
+                this.hitBoxSpawned = true;
+            }
+
+            //remove hitbox
+            if (this.stateTimer >= atk.active) {
+                this.removeHitbox();
+            }
+
+            if (this.stateTimer >= atk.active) {
+                this.enterState('attack_recovery');
+            }
+        } else if (this.state === 'attack_recovery') {
+            if (this.stateTimer >= atk.recovery) {
+                this.attackCooldown = atk.startup + atk.active + atk.recovery + (atk.cooldownExtra || 0);
+                this.enterState('idle');
+            }
+        }
+    }
+
+    spawnHitbox(atk) {
+
+    }
+
+    removeHitbox() {
+
+    }
+
+    applyPhysics() {
+        //apply gravity
         this.vy += CONFIG.gravity;
 
-        //update pos
+        //apply physics
         this.x += this.vx;
         this.y += this.vy;
 
@@ -58,8 +257,9 @@ export default class Fighter {
             this.vy = 0;
             this.onGround = true;
 
-            if (this.state === 'jump') {
-                this.state = 'idle';
+            //if landing fallback to idle/walk
+            if (this.state === 'jump_fall') {
+                this.enterState('idle');
             }
         } else {
             this.onGround = false;
@@ -72,26 +272,36 @@ export default class Fighter {
         }
     }
 
+    updateAnimation() {
+        let animKey = 'idle';
+        switch (this.state) {
+            case 'idle': animKey = 'idle'; break;
+            case 'walk': animKey = 'walk'; break;
+            case 'jump_rise': animKey = 'jump'; break;
+            case 'jump_fall': animKey = 'jump'; break;
+            case 'attack_startup':
+            case 'attack_active':
+            case 'attack_recovery':
+                animKey = this.currentAttack ? this.currentAttack.animKey : 'idle';
+                break;
+            case 'hitstun': animKey = 'hit'; break;
+        }
+        this.animController.setAnimation(animKey);
+        this.animController.update();
+    }
 
     draw(ctx) {
-        ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, this.width, this.height);
+        this.animController.drawPlaceholder(ctx, this.x, this.y, this.width, this.height, this.facingRight);
 
-        //option facing indicator
-        ctx.strokeStyle = 'blue';
-        ctx.beginPath();
-        const cx = this.x + this.width / 2;
-        const cy = this.y + this.height / 2;
-        const len = 10;
+        ctx.fillStyle = 'white';
+        ctx.font = '12px sans-serif';
+        ctx.fillText(this.state, this.x, this.y - 5);
+    }
 
-        if (this.facingRight) {
-            ctx.moveTo(cx, cy);
-            ctx.lineTo(cx + len, cy);
-        } else {
-            ctx.moveTo(cx, cy);
-            ctx.lineTo(cx - len, cy);
-        }
-
-        ctx.stroke();
+    takeHit(damage, knockbackX, knockbackY) {
+        this.vx = (this.facingRight ? -1 : 1) * knockbackX;
+        this.vy = knockbackY;
+        this.stunTimer = CONFIG.hitStunFrames;
+        this.enterState('hitstun');
     }
 }
