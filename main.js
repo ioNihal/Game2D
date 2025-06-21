@@ -23,7 +23,8 @@ const player = new Fighter({
     width: 40,
     height: 80,
     color: 'white',
-    attacks: ATTACKS
+    attacks: ATTACKS,
+    maxHealth: 100,
 });
 
 //for testing
@@ -34,7 +35,8 @@ const enemy = new Fighter({
     width: 40,
     height: 80,
     color: 'red',
-    attacks: ATTACKS
+    attacks: ATTACKS,
+    maxHealth: 100,
 })
 
 const enemyAI = new AIController(enemy, player, {
@@ -45,6 +47,50 @@ const enemyAI = new AIController(enemy, player, {
 })
 
 const hitboxes = [];
+
+
+let gameOver = false;
+let winner = null;
+
+const checkGameOver = () => {
+    if (gameOver) return;
+    if (player.state === 'ko') {
+        gameOver = true;
+        winner = 'enemy';
+    } else if (enemy.state === 'ko') {
+        gameOver = true;
+        winner = 'enemy';
+    }
+
+    if (gameOver) {
+        setTimeout(() => {
+
+        }, 100)
+    }
+}
+
+const resetRound = () => {
+    gameOver = false;
+    winner = null;
+
+    player.health = player.maxHealth;
+    enemy.health = enemy.maxHealth;
+
+    player.x = 100;
+    player.y = CONFIG.groundY - player.height;
+    player.vx = 0;
+    player.vy = 0;
+    player.enterState('idle');
+
+    enemy.x = CONFIG.canvasWidth - 100 - enemy.width;
+    enemy.y = CONFIG.groundY - enemy.height;
+    enemy.vx = 0;
+    enemy.vy = 0;
+    enemy.enterState('idle');
+
+    //clear hitboaxes
+    hitboxes.length = 0;
+}
 
 const drawPressedKeys = () => {
     ctx.fillStyle = 'white';
@@ -85,6 +131,66 @@ const updateHitboxes = () => {
     }
 }
 
+const drawHealthBar = (x, y, width, height, currentHealth, maxHealth, fillColor) => {
+    ctx.fillStyle = '#555';
+    ctx.fillRect(x, y, width, height);
+
+    const percent = Math.max(0, currentHealth) / maxHealth;
+    const barWidth = width * percent;
+    ctx.fillStyle = fillColor;
+    ctx.fillRect(x, y, barWidth, height);
+
+    //border
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, width, height);
+}
+
+const drawUI = () => {
+    const barWidth = 200;
+    const barHeight = 20;
+    const padding = 20;
+
+    //PlayerBar
+
+    drawHealthBar(
+        padding,
+        padding,
+        barWidth,
+        barHeight,
+        player.health,
+        player.maxHealth,
+        '#0f0'
+    );
+
+    drawHealthBar(
+        CONFIG.canvasWidth - barWidth - padding,
+        padding,
+        barWidth, barHeight,
+        enemy.health,
+        enemy.maxHealth,
+        '#f00'
+    )
+
+    //text
+    ctx.fillStyle = 'white';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('You', padding, padding + barHeight + 15);
+    ctx.fillText('Enemy', CONFIG.canvasWidth - barWidth - padding - 10, padding + barHeight + 15);
+}
+
+const drawGameOver = () => {
+    const text = winner === 'player' ? 'You Win!' : 'Game Over';
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, 0, CONFIG.canvasWidth, CONFIG.canvasHeight);
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'center';
+    ctx.fillText(text, CONFIG.canvasWidth / 2, CONFIG.canvasHeight / 2);
+    ctx.font = '24px sans-serif';
+    ctx.fillText('Press R to Restart', CONFIG.canvasWidth / 2, CONFIG.canvasHeight / 2 + 40);
+    ctx.textAlign = 'start';
+}
+
 const drawHitboxesDebug = () => {
     for (const hb of hitboxes) {
         hb.drawDebug(ctx);
@@ -108,23 +214,22 @@ const drawTest = () => {
 const gameLoop = () => {
     clearScreen();
 
-    player.update(input);
+    if (!gameOver) {
+        // Normal update
+        player.update(input);
+        enemyAI.update();
+        enemy.update(null);
 
-    enemyAI.update();
-
-    enemy.update(null);
-
-    if (player.pendingHitbox) {
-        hitboxes.push(player.pendingHitbox);
-        player.pendingHitbox = null;
+        if (player.pendingHitbox) {
+            hitboxes.push(player.pendingHitbox);
+            player.pendingHitbox = null;
+        }
+        if (enemy.pendingHitbox) {
+            hitboxes.push(enemy.pendingHitbox);
+            enemy.pendingHitbox = null;
+        }
+        updateHitboxes();
     }
-
-    if (enemy.pendingHitbox) {
-        hitboxes.push(enemy.pendingHitbox);
-        enemy.pendingHitbox = null;
-    }
-
-    updateHitboxes();
 
     drawGround();
     player.draw(ctx);
@@ -132,12 +237,30 @@ const gameLoop = () => {
 
     drawHitboxesDebug();
 
+    drawUI();
 
-    //for debug: display state info
-    ctx.fillStyle = 'white';
-    ctx.font = '16px sans-serif';
-    ctx.fillText(`Player State: ${player.state}`, 10, 20);
-    ctx.fillText(`Player POS: (${player.x.toFixed(1)}, ${player.y.toFixed(1)})`, 10, 40);
+    if (!gameOver) {
+        checkGameOver();
+    } else {
+        drawGameOver();
+    }
+
+    if (gameOver) {
+        if (input.isKeyJustPressed('KeyR')) {
+            resetRound();
+        }
+    }
+
+
+
+
+
+    // //for debug: display state info
+    // ctx.fillStyle = 'white';
+    // ctx.font = '16px sans-serif';
+    // ctx.fillText(`Player State: ${player.state}`, 10, 20);
+    // ctx.fillText(`Player POS: (${player.x.toFixed(1)}, ${player.y.toFixed(1)})`, 10, 40);
+
 
 
     input.update();

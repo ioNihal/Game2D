@@ -5,6 +5,7 @@ export const ANIMATIONS = {
     lightPunch: { frames: 3, frameDuration: 6, loop: false, color: '#FF0000' },
     airPunch: { frames: 2, frameDuration: 6, loop: false, color: '#FF5555' },
     hit: { frames: 1, frameDuration: 10, loop: false, color: '#FF00FF' },
+    ko: { frames: 1, frameDuration: 10, loop: false, color: '#000000' },
 
 };
 

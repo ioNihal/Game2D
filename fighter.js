@@ -4,13 +4,15 @@ import Hitbox from './hitbox.js';
 
 
 export default class Fighter {
-    constructor({ name = 'Fighter', x, y, width, height, color, attacks = [] }) {
+    constructor({ name = 'Fighter', x, y, width, height, color, attacks = [], maxHealth = 100 }) {
         this.name = name;
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
         this.color = color || 'white';
+        this.maxHealth = maxHealth;
+        this.health = maxHealth;
 
 
         //Physics
@@ -158,9 +160,17 @@ export default class Fighter {
                 this.handleAttackState();
                 break;
 
+            case 'ko':
+                this.vx = 0;
+                return;
+
             case 'hitstun':
+                if (this.stunTimer === 0) {
+                    this.enterState('idle');
+                }
                 this.vx = 0;
                 break;
+
 
             //other state block, knockdown,etc..
 
@@ -194,6 +204,9 @@ export default class Fighter {
                     break;
                 case 'hitstun':
                     //in processstate
+                    break;
+                case 'ko':
+                    this.vx = 0;
                     break;
             }
         }
@@ -307,6 +320,7 @@ export default class Fighter {
                 animKey = this.currentAttack ? this.currentAttack.animKey : 'idle';
                 break;
             case 'hitstun': animKey = 'hit'; break;
+            case 'ko': animKey = 'ko'; break;
         }
 
         this.animController.setAnimation(animKey);
@@ -330,10 +344,15 @@ export default class Fighter {
     }
 
     takeHit(damage, vx, vy) {
-        this.health = (this.health ?? 100) - damage;
+        this.health = (this.health ?? this.maxHealth) - damage;
         this.vx = vx;
         this.vy = vy;
-        this.stunTimer = CONFIG.hitStunFrames;
-        this.enterState('hitstun');
+        if (this.health <= 0) {
+            this.health = 0;
+            this.enterState('ko');
+        } else {
+            this.stunTimer = CONFIG.hitStunFrames;
+            this.enterState('hitstun');
+        }
     }
 }
