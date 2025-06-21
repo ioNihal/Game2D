@@ -3,6 +3,7 @@ import Fighter from "./fighter.js";
 import { CONFIG } from "./config.js";
 import { ATTACKS } from "./attack.js";
 import Hitbox from "./hitbox.js";
+import AIController from "./ai.js";
 
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 450;
@@ -34,6 +35,13 @@ const enemy = new Fighter({
     height: 80,
     color: 'red',
     attacks: ATTACKS
+})
+
+const enemyAI = new AIController(enemy, player, {
+    preferredRange: 70,
+    blockProbability: 0.5,
+    retreatProbability: 0.01,
+    jumpProbability: 0.005,
 })
 
 const hitboxes = [];
@@ -101,6 +109,8 @@ const gameLoop = () => {
     clearScreen();
 
     player.update(input);
+
+    enemyAI.update();
 
     enemy.update(null);
 
