@@ -38,7 +38,7 @@ const enemy = new Fighter({
 })
 
 const enemyAI = new AIController(enemy, player, {
-    preferredRange: 70,
+    preferredRange: 50,
     blockProbability: 0.5,
     retreatProbability: 0.01,
     jumpProbability: 0.005,
