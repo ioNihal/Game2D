@@ -5,4 +5,5 @@ export const CONFIG = {
     gravity: 0.7,
     walkSpeed: 3.5,
     jumpVelocity: -12,
+    hitStunFrames: 20,
 }

@@ -1,8 +1,11 @@
 import { CONFIG } from './config.js';
 import { AnimationController, ANIMATIONS } from './animation.js';
+import Hitbox from './hitbox.js';
+
 
 export default class Fighter {
-    constructor({ x, y, width, height, color, attacks = [] }) {
+    constructor({ name = 'Fighter', x, y, width, height, color, attacks = [] }) {
+        this.name = name;
         this.x = x;
         this.y = y;
         this.width = width;
@@ -40,6 +43,11 @@ export default class Fighter {
 
         if (this.attackCooldown > 0) {
             this.attackCooldown--;
+        }
+
+        // If we were in hitstun and timer just expired, go to idle
+        if (this.state === 'hitstun' && this.stunTimer === 0) {
+            this.enterState('idle');
         }
 
         //State transtition: inputonly if not hitstun
@@ -236,11 +244,25 @@ export default class Fighter {
     }
 
     spawnHitbox(atk) {
+        const duration = atk.active;
+        const hb = new Hitbox({
+            owner: this,
+            offsetX: atk.offsetX,
+            offsetY: atk.offsetY,
+            width: atk.width,
+            height: atk.height,
+            damage: atk.damage,
+            knockbackX: atk.knockbackX,
+            knockbackY: atk.knockbackY,
+            durationFrames: duration,
+        });
 
+        this.pendingHitbox = hb;
     }
 
     removeHitbox() {
-
+        // After active frames, we rely on duration expiry; nothing special needed here.
+        // But if you wanted immediate removal: set pendingHitbox = null or mark hb.age = duration to expire next update.
     }
 
     applyPhysics() {
@@ -286,6 +308,7 @@ export default class Fighter {
                 break;
             case 'hitstun': animKey = 'hit'; break;
         }
+
         this.animController.setAnimation(animKey);
         this.animController.update();
     }
@@ -296,11 +319,20 @@ export default class Fighter {
         ctx.fillStyle = 'white';
         ctx.font = '12px sans-serif';
         ctx.fillText(this.state, this.x, this.y - 5);
+
+        // Hurtbox debug
+        ctx.save();
+        ctx.strokeStyle = 'blue';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(this.x, this.y, this.width, this.height);
+        ctx.restore();
+
     }
 
-    takeHit(damage, knockbackX, knockbackY) {
-        this.vx = (this.facingRight ? -1 : 1) * knockbackX;
-        this.vy = knockbackY;
+    takeHit(damage, vx, vy) {
+        this.health = (this.health ?? 100) - damage;
+        this.vx = vx;
+        this.vy = vy;
         this.stunTimer = CONFIG.hitStunFrames;
         this.enterState('hitstun');
     }
