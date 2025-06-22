@@ -27,9 +27,7 @@ const buildImageListForCharacter = (charKey) => {
         for (let i = 1; i <= cfg.frameCount; i++) {
             const key = `${charKey}_${animKey}${i}`;
             const url = `${cfg.path}${i}${cfg.extension}`;
-            if (animKey === 'block') {
-                console.log(`Loading block frame: key=${key}, url=${url}`);
-            }
+           
 
             list.push({ key, url });
         }
