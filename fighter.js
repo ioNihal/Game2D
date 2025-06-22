@@ -4,7 +4,7 @@ import Hitbox from './hitbox.js';
 
 
 export default class Fighter {
-    constructor({ name = 'Fighter', x, y, width, height, color, attacks = [], maxHealth = 100 }) {
+    constructor({ name = 'Fighter', x, y, width, height, color, attacks = [], maxHealth = 100, assetLoader, animationsConfig }) {
         this.name = name;
         this.x = x;
         this.y = y;
@@ -34,8 +34,30 @@ export default class Fighter {
         this.attacks = attacks;
         this.currentAttack = null;
 
+
+        // Asset loader and animation controller
+        if (!assetLoader) {
+            console.warn('Fighter: assetLoader not provided; animations will fail.');
+        }
+        if (!animationsConfig) {
+            console.warn('Fighter: animationsConfig not provided; animations will fail.');
+        }
+
         //Anim Controller
-        this.animController = new AnimationController(ANIMATIONS);
+        if (assetLoader && animationsConfig) {
+            this.animController = new AnimationController(animationsConfig, assetLoader);
+        } else {
+            this.animController = {
+                current: 'idle',
+                setAnimation: () => { },
+                update: () => { },
+                draw: (ctx, x, y, w, h, facingRight) => {
+                    // fallback: draw a simple rectangle
+                    ctx.fillStyle = this.color;
+                    ctx.fillRect(x, y, w, h);
+                }
+            };
+        }
     }
 
     update(input) {
@@ -172,7 +194,7 @@ export default class Fighter {
 
             case 'block':
                 this.vx = 0;
-                if(this.aiBlockTimer > 0) {
+                if (this.aiBlockTimer > 0) {
                     return;
                 }
 
@@ -188,7 +210,7 @@ export default class Fighter {
                             this.enterState('idle');
                         }
                         return;
-                    } 
+                    }
                 }
                 break;
 
@@ -370,13 +392,13 @@ export default class Fighter {
                 case 'ko': animKey = 'ko'; break;
             }
         }
-
+//   console.log(`[Fighter ${this.name}] state='${this.state}', chosen animKey='${animKey}', previous anim='${this.animController.current}'`);
         this.animController.setAnimation(animKey);
         this.animController.update();
     }
 
     draw(ctx) {
-        this.animController.drawPlaceholder(ctx, this.x, this.y, this.width, this.height, this.facingRight);
+        this.animController.draw(ctx, this.x, this.y, this.width, this.height, this.facingRight);
 
         ctx.fillStyle = 'white';
         ctx.font = '12px sans-serif';
