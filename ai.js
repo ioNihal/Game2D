@@ -6,6 +6,7 @@ export default class AIController {
         this.opponent = opponent;
 
         //config for behaviour
+        this.blockDuration = config.blockDuration ?? 20;
         this.preferredRange = config.preferredRange ?? 50;
         this.approachSpeed = config.approachSpeed ?? true;
         this.blockProbability = config.blockProbability ?? 0.6;
@@ -30,7 +31,10 @@ export default class AIController {
         const absDx = Math.abs(dx);
 
         if (absDx < this.preferredRange + 20 && ['attack_active', 'attack_startup'].includes(p.state) && Math.random() < this.blockProbability) {
-            f.vx = 0;
+            if (f.onGround) {
+                f.enterState('block');
+                f.aiBlockTimer = this.blockDuration;
+            }
             return;
         }
 
@@ -77,6 +81,16 @@ export default class AIController {
         if (absDx > 20 && Math.random() < this.jumpProbability && f.onGround) {
             //jump to approach
             f.enterState('jump_rise');
+            return;
+        }
+
+        //decrement aiBlockTimer
+        if (f.state === 'block' && f.aiBlockTimer !== undefined) {
+            f.aiBlockTimer--;
+            if (f.aiBlockTimer <= 0) {
+                delete f.aiBlockTimer;
+                f.enterState('idle');
+            }
             return;
         }
 

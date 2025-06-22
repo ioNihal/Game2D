@@ -6,6 +6,8 @@ export const ANIMATIONS = {
     airPunch: { frames: 2, frameDuration: 6, loop: false, color: '#FF5555' },
     hit: { frames: 1, frameDuration: 10, loop: false, color: '#FF00FF' },
     ko: { frames: 1, frameDuration: 10, loop: false, color: '#000000' },
+    block: { frames: 1, frameDuration: 10, loop: true, color: '#0000FF' },
+    blockHit: { frames: 1, frameDuration: 6, loop: false, color: '#5555FF' },
 
 };
 

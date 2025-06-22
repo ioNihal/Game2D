@@ -13,6 +13,7 @@ export default class Fighter {
         this.color = color || 'white';
         this.maxHealth = maxHealth;
         this.health = maxHealth;
+        this.blockHitTimer = 0;
 
 
         //Physics
@@ -47,6 +48,10 @@ export default class Fighter {
             this.attackCooldown--;
         }
 
+        if (this.blockHitTimer > 0) {
+            this.blockHitTimer--;
+        }
+
         // If we were in hitstun and timer just expired, go to idle
         if (this.state === 'hitstun' && this.stunTimer === 0) {
             this.enterState('idle');
@@ -71,6 +76,10 @@ export default class Fighter {
             case 'idle':
                 this.vx = 0;
                 if (input) {
+                    if ((input.isKeyDown('KeyK')) && this.onGround) {
+                        this.enterState('block');
+                        return;
+                    }
                     if (input.isKeyDown('ArrowLeft') || input.isKeyDown('KeyA')) {
                         this.facingRight = false;
                         this.enterState('walk');
@@ -98,6 +107,12 @@ export default class Fighter {
 
             case 'walk':
                 if (input) {
+                    if ((input.isKeyDown('KeyK')) && this.onGround) {
+                        this.enterState('block');
+                        this.vx = 0;
+                        return;
+                    }
+
                     if (input.isKeyDown('ArrowLeft') || input.isKeyDown('KeyA')) {
                         this.vx = -CONFIG.walkSpeed;
                         this.facingRight = false;
@@ -154,6 +169,29 @@ export default class Fighter {
                     }
                 }
                 break;
+
+            case 'block':
+                this.vx = 0;
+                if(this.aiBlockTimer > 0) {
+                    return;
+                }
+
+                if (input) {
+                    if (!input.isKeyDown('KeyK')) {
+                        if (input.isKeyDown('ArrowLeft') || input.isKeyDown('KeyA')) {
+                            this.enterState('walk');
+                            this.facingRight = false;
+                        } else if (input.isKeyDown('ArrowRight') || input.isKeyDown('KeyD')) {
+                            this.enterState('walk');
+                            this.facingRight = true;
+                        } else {
+                            this.enterState('idle');
+                        }
+                        return;
+                    } 
+                }
+                break;
+
             case 'attack_startup':
             case 'attack_active':
             case 'attack_recovery':
@@ -185,7 +223,12 @@ export default class Fighter {
             this.state = newState;
             this.stateTimer = 0;
 
+
             switch (newState) {
+                case 'block':
+                    this.blockHitTimer = 0;
+                    break;
+
                 case 'idle':
                     this.vx = 0;
                     break;
@@ -309,18 +352,23 @@ export default class Fighter {
 
     updateAnimation() {
         let animKey = 'idle';
-        switch (this.state) {
-            case 'idle': animKey = 'idle'; break;
-            case 'walk': animKey = 'walk'; break;
-            case 'jump_rise': animKey = 'jump'; break;
-            case 'jump_fall': animKey = 'jump'; break;
-            case 'attack_startup':
-            case 'attack_active':
-            case 'attack_recovery':
-                animKey = this.currentAttack ? this.currentAttack.animKey : 'idle';
-                break;
-            case 'hitstun': animKey = 'hit'; break;
-            case 'ko': animKey = 'ko'; break;
+        if (this.blockHitTimer > 0) {
+            animKey = 'blockHit'
+        } else {
+            switch (this.state) {
+                case 'idle': animKey = 'idle'; break;
+                case 'walk': animKey = 'walk'; break;
+                case 'jump_rise': animKey = 'jump'; break;
+                case 'jump_fall': animKey = 'jump'; break;
+                case 'block': animKey = 'block'; break;
+                case 'attack_startup':
+                case 'attack_active':
+                case 'attack_recovery':
+                    animKey = this.currentAttack ? this.currentAttack.animKey : 'idle';
+                    break;
+                case 'hitstun': animKey = 'hit'; break;
+                case 'ko': animKey = 'ko'; break;
+            }
         }
 
         this.animController.setAnimation(animKey);
@@ -343,16 +391,30 @@ export default class Fighter {
 
     }
 
-    takeHit(damage, vx, vy) {
-        this.health = (this.health ?? this.maxHealth) - damage;
-        this.vx = vx;
-        this.vy = vy;
-        if (this.health <= 0) {
-            this.health = 0;
-            this.enterState('ko');
+    takeHit(damage, kbX, kbY) {
+        if (this.state === 'block' && this.onGround) {
+            const reducedDamage = damage * CONFIG.blockDamageReduction;
+            this.health = (this.health ?? this.maxHealth) - reducedDamage;
+
+            const reducedKbX = kbX * CONFIG.blockKnockbackReduction;
+            this.vx = reducedKbX;
+
+            this.vy = 0;
+            this.stunTimer = CONFIG.blockStunFrames;
+
+            this.blockHitTimer = CONFIG.blockHitFrames || 6;
+            this.enterState('block');
         } else {
-            this.stunTimer = CONFIG.hitStunFrames;
-            this.enterState('hitstun');
+            this.health = (this.health ?? this.maxHealth) - damage;
+            this.vx = kbX;
+            this.vy = kbY;
+            if (this.health <= 0) {
+                this.health = 0;
+                this.enterState('ko');
+            } else {
+                this.stunTimer = CONFIG.hitStunFrames;
+                this.enterState('hitstun');
+            }
         }
     }
 }
