@@ -38,7 +38,7 @@ export default class Hitbox {
         if (target === this.owner) return false;
         if (this.hasHit.has(target)) return false;
         const hb = this.getBounds();
-        const tb = { x: target.x, y: target.y, width: target.width, height: target.height };
+        const tb =  target.getHurtboxBounds();
 
         //AABB collison
 

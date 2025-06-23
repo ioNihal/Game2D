@@ -27,7 +27,7 @@ const buildImageListForCharacter = (charKey) => {
         for (let i = 1; i <= cfg.frameCount; i++) {
             const key = `${charKey}_${animKey}${i}`;
             const url = `${cfg.path}${i}${cfg.extension}`;
-           
+
 
             list.push({ key, url });
         }
@@ -74,10 +74,11 @@ const startGame = () => {
 
     const player = new Fighter({
         name: 'Player',
+        charKey: 'player',
         x: 100,
-        y: CONFIG.groundY - 80,
-        width: 40,
-        height: 80,
+        y: CONFIG.groundY - 280,
+        width: 250,
+        height: 280,
         // color: 'white',
         attacks: ATTACKS,
         maxHealth: 100,
@@ -87,10 +88,11 @@ const startGame = () => {
 
     const enemy = new Fighter({
         name: 'Enemy',
+        charKey: 'enemy',
         x: 300,
-        y: CONFIG.groundY - 80,
-        width: 40,
-        height: 80,
+        y: CONFIG.groundY - 280,
+        width: 250,
+        height: 280,
         // color: 'red',
         attacks: ATTACKS,
         maxHealth: 100,
@@ -99,7 +101,7 @@ const startGame = () => {
     })
 
     const enemyAI = new AIController(enemy, player, {
-        preferredRange: 50,
+        preferredRange:80,
         blockProbability: 0.5,
         retreatProbability: 0.01,
         jumpProbability: 0.005,
@@ -114,11 +116,16 @@ const startGame = () => {
     const checkGameOver = () => {
         if (gameOver) return;
         if (player.state === 'ko') {
-            gameOver = true;
-            winner = 'enemy';
+            setTimeout(() => {
+                gameOver = true;
+                winner = 'enemy'
+            }, 5000)
+
         } else if (enemy.state === 'ko') {
-            gameOver = true;
-            winner = 'enemy';
+            setTimeout(() => {
+                gameOver = true;
+                winner = 'playerdd'
+            }, 3000)
         }
 
         if (gameOver) {
@@ -162,7 +169,7 @@ const startGame = () => {
     }
 
     const drawGround = () => {
-        ctx.fillStyle = '#222';
+        ctx.fillStyle = '#FFF';
         ctx.fillRect(0, CONFIG.groundY, CONFIG.canvasWidth, CONFIG.canvasHeight - CONFIG.groundY);
 
     }

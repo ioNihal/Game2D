@@ -10,8 +10,8 @@ export const ATTACKS = [
     knockbackX: 5,
     knockbackY: -3,
     animKey: 'lightPunch',
-    offsetX: 0,    // relative to fighter.x; adjust later
-    offsetY: 20,
+    offsetX: 135,    // relative to fighter.x; adjust later
+    offsetY: 225,
     width: 30,
     height: 20,
     cooldownExtra: 5, // extra frames before next attack allowed
@@ -26,8 +26,8 @@ export const ATTACKS = [
     knockbackX: 4,
     knockbackY: -2,
     animKey: 'airPunch',
-    offsetX: 0,
-    offsetY: 10,
+    offsetX: 135,
+    offsetY: 260,
     width: 30,
     height: 20,
     cooldownExtra: 5,

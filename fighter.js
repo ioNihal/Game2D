@@ -1,11 +1,13 @@
 import { CONFIG } from './config.js';
 import { AnimationController, ANIMATIONS } from './animation.js';
 import Hitbox from './hitbox.js';
+import { ANIMATION_CONFIG } from './animationConfig.js';
 
 
 export default class Fighter {
-    constructor({ name = 'Fighter', x, y, width, height, color, attacks = [], maxHealth = 100, assetLoader, animationsConfig }) {
+    constructor({ name = 'Fighter', x, y, width, height, color, attacks = [], maxHealth = 100, charKey, assetLoader, animationsConfig }) {
         this.name = name;
+        this.charKey = charKey;
         this.x = x;
         this.y = y;
         this.width = width;
@@ -288,6 +290,29 @@ export default class Fighter {
         this.enterState('attack_startup');
     }
 
+    getHurtboxBounds() {
+        const animKey = this.animController.current;
+        const animCfg = ANIMATION_CONFIG[this.charKey] && ANIMATION_CONFIG[this.charKey][animKey];
+        let offsetX, offsetY, w, h;
+        if (animCfg && animCfg.hurtbox) {
+            offsetX = animCfg.hurtbox.offsetX;
+            offsetY = animCfg.hurtbox.offsetY;
+            w = animCfg.hurtbox.width;
+            h = animCfg.hurtbox.height
+                ;
+        }
+
+        let x;
+        if (this.facingRight) {
+            x = this.x + offsetX;
+        } else {
+            x = this.x + this.width - offsetX - w;
+        }
+
+        const y = this.y + offsetY;
+        return { x, y, width: w, height: h };
+    }
+
 
     handleAttackState() {
         this.stateTimer++;
@@ -343,6 +368,8 @@ export default class Fighter {
         // But if you wanted immediate removal: set pendingHitbox = null or mark hb.age = duration to expire next update.
     }
 
+
+
     applyPhysics() {
         //apply gravity
         this.vy += CONFIG.gravity;
@@ -392,7 +419,7 @@ export default class Fighter {
                 case 'ko': animKey = 'ko'; break;
             }
         }
-//   console.log(`[Fighter ${this.name}] state='${this.state}', chosen animKey='${animKey}', previous anim='${this.animController.current}'`);
+        //   console.log(`[Fighter ${this.name}] state='${this.state}', chosen animKey='${animKey}', previous anim='${this.animController.current}'`);
         this.animController.setAnimation(animKey);
         this.animController.update();
     }
@@ -400,15 +427,18 @@ export default class Fighter {
     draw(ctx) {
         this.animController.draw(ctx, this.x, this.y, this.width, this.height, this.facingRight);
 
+        const hb = this.getHurtboxBounds();
+
         ctx.fillStyle = 'white';
         ctx.font = '12px sans-serif';
-        ctx.fillText(this.state, this.x, this.y - 5);
+        ctx.fillText(this.state, hb.x, hb.y - 5);
 
         // Hurtbox debug
+        
         ctx.save();
         ctx.strokeStyle = 'blue';
         ctx.lineWidth = 1;
-        ctx.strokeRect(this.x, this.y, this.width, this.height);
+        ctx.strokeRect(hb.x, hb.y, hb.width, hb.height);
         ctx.restore();
 
     }

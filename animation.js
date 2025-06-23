@@ -76,10 +76,10 @@ export class AnimationController {
             return;
         }
         if (facingRight) {
-            ctx.drawImage(img, x, y, width, height);
+            ctx.drawImage(img, x, (y + 70), width, height);
         } else {
             ctx.save();
-            ctx.translate(x + width / 2, y + height / 2);
+            ctx.translate(x + width / 2, (y + 70) + height / 2);
             ctx.scale(-1, 1);
             ctx.drawImage(img, -width / 2, -height / 2, width, height);
             ctx.restore();
