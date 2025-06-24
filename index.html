@@ -1,24 +1,203 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <title>Stickman Fighter</title>
-        <style>
-            body {
-                margin: 0;
-                overflow: hidden;
-                background: #222;
-            }
 
-            #gameCanvas {
-                display: block;
-                background: #444;
-                margin: 0 auto;
-            }
-        </style>
-    </head>
-    <body>
+<head>
+    <meta charset="UTF-8" />
+    <title>Stickman Fighter</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: sans-serif;
+            background: #222;
+            color: #fff;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10;
+            /* above canvas */
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 18px;
+            border: none;
+            border-radius: 5px;
+            background: #555;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #777;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: #444;
+            /* We'll set its size via JS or CSS as desired */
+        }
+
+        /* Settings form styling */
+        .settings-form {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .settings-form label {
+            margin: 8px 0 4px;
+            font-size: 16px;
+        }
+
+        .settings-form input[type="range"],
+        .settings-form select {
+            margin-bottom: 12px;
+        }
+
+        /* Mobile controls overlay */
+        #mobileControls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            height: 150px;
+            pointer-events: none;
+            /* children receive events */
+            z-index: 20;
+        }
+
+        .touch-button {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            touch-action: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #fff;
+            user-select: none;
+        }
+
+        /* Example positions */
+        #btnLeft {
+            left: 20px;
+            bottom: 20px;
+        }
+
+        #btnRight {
+            left: 100px;
+            bottom: 20px;
+        }
+
+        #btnJump {
+            right: 100px;
+            bottom: 20px;
+        }
+
+        #btnAttack {
+            right: 20px;
+            bottom: 100px;
+        }
+
+        #btnBlock {
+            right: 20px;
+            bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="gameContainer">
         <canvas id="gameCanvas"></canvas>
-        <script type="module" src="main.js"></script>
-    </body>
+
+        <!-- Home screen -->
+        <div id="menuScreen" class="screen">
+            <h1>StickMan Fighter</h1>
+            <button id="startButton">Start Game</button>
+            <button id="settingsButton">Settings</button>
+            <button id="intructionsButton">Instructions</button>
+        </div>
+
+        <!-- Settings Screen -->
+        <div class="settingsScreen" class="screen hidden">
+            <h2>Settings</h2>
+            <form id="settingsForm" class="settings-form">
+                <label for="volumeRange">Volume:</label>
+                <input type="range" id="volumeRange" min="0" max="1" step="0.01">
+                <label for="touchToggle">Enable Mobile Controls:</label>
+                <select id="touchToggle">
+                    <option value="auto">Auto-detect</option>
+                    <option value="on">On</option>
+                    <option value="off">Off</option>
+                </select>
+
+                <label for="difficultySelect">Difficulty:</label>
+                <select id="difficultySelect">
+                    <option value="easy">Easy</option>
+                    <option value="normal">Normal</option>
+                    <option value="hard">Hard</option>
+                </select>
+            </form>
+            <button id="settingsBackButton">Back</button>
+        </div>
+
+        <!-- Instruction Screen -->
+        <div id="instructionsScreen" class="screen hidden">
+            <h2>Instructions</h2>
+            <p>Use arrow keys or A/D to move, W/Up to jump, J to attack, K to block.</p>
+            <p>On mobile, use on-screen buttons.</p>
+            <button id="instructionsBackButton">Back</button>
+        </div>
+
+        <!-- Pause overlay -->
+        <div id="pauseOverlay" class="screen hidden">
+            <h2>Paused</h2>
+            <button id="resumeButton">Resume</button>
+            <button id="pauseSettingsButton">Settings</button>
+            <button id="quitButton">Quit to Menu</button>
+        </div>
+
+        <!-- Mobile Controll Overlay -->
+        <div id="mobileControls" class="hidden">
+            <div id="btnLeft" class="touch-button">◀</div>
+            <div id="btnRight" class="touch-button">▶</div>
+            <div id="btnJump" class="touch-button">▲</div>
+            <div id="btnAttack" class="touch-button">A</div>
+            <div id="btnBlock" class="touch-button">B</div>
+        </div>
+    </div>
+
+    <script type="module" src="ui.js"></script>
+    <script type="module" src="main.js"></script>
+</body>
+
 </html>
