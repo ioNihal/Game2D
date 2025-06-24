@@ -21,7 +21,10 @@ export default class UIManager {
         this.quitButton = document.getElementById('quitButton');
 
         // Settings form elements
-        this.volumeRange = document.getElementById('volumeRange');
+        this.masterVolumeRange = document.getElementById('masterVolumeRange');
+        this.musicVolumeRange = document.getElementById('musicVolumeRange');
+        this.sfxVolumeRange = document.getElementById('sfxVolumeRange');
+        this.muteToggle = document.getElementById('muteToggle');
         this.touchToggle = document.getElementById('touchToggle');
         this.difficultySelect = document.getElementById('difficultySelect');
 
@@ -32,10 +35,9 @@ export default class UIManager {
         this.btnAttack = document.getElementById('btnAttack');
         this.btnBlock = document.getElementById('btnBlock');
 
-        // Track from where settings was opened: 'menu' or 'pause'
+        // to know from where settings opened!
         this._settingsParent = null;
 
-        // Bind events
         this._bindEvents();
 
         // Load settings from localStorage
@@ -44,14 +46,13 @@ export default class UIManager {
         // Detect mobile and show controls if enabled
         this._updateMobileControlsVisibility();
 
-        // Handle window resize if needed for responsive layout
+        // Handle window resize
         window.addEventListener('resize', () => {
             this._updateMobileControlsVisibility();
         });
     }
 
     _bindEvents() {
-        // Start game from main menu
         this.startButton.addEventListener('click', () => {
             this.hideAllScreens();
             this.game.startGame();
@@ -59,7 +60,6 @@ export default class UIManager {
 
         // Main menu -> Settings
         this.settingsButton.addEventListener('click', () => {
-            // Only from menu (game not running) or from pause? This is main menu button.
             if (!this.game.isRunning()) {
                 this.showSettings('menu');
             }
@@ -74,6 +74,7 @@ export default class UIManager {
         this.settingsBackButton.addEventListener('click', () => {
             this.onSettingsBack();
         });
+
         // Instructions Back
         this.instructionsBackButton.addEventListener('click', () => {
             this.onInstructionsBack();
@@ -99,11 +100,31 @@ export default class UIManager {
         });
 
         // Settings changes
-        this.volumeRange.addEventListener('input', () => {
-            const vol = parseFloat(this.volumeRange.value);
-            this.game.setVolume(vol);
+        // Master volume slider
+        this.masterVolumeRange.addEventListener('input', () => {
+            const vol = parseFloat(this.masterVolumeRange.value);
+            this._applyMuteAndVolumes();
             this._saveSettings();
         });
+        // Music volume slider
+        this.musicVolumeRange.addEventListener('input', () => {
+            const vol = parseFloat(this.musicVolumeRange.value);
+            this._applyMuteAndVolumes();
+            this._saveSettings();
+        });
+        // SFX volume slider
+        this.sfxVolumeRange.addEventListener('input', () => {
+            const vol = parseFloat(this.sfxVolumeRange.value);
+            this._applyMuteAndVolumes();
+            this._saveSettings();
+        });
+        // Mute toggle
+        this.muteToggle.addEventListener('change', () => {
+            this._applyMuteAndVolumes();
+            this._saveSettings();
+        });
+
+
         this.touchToggle.addEventListener('change', () => {
             this._saveSettings();
             this._updateMobileControlsVisibility();
@@ -113,7 +134,7 @@ export default class UIManager {
             this._saveSettings();
         });
 
-        // Pause via Escape key and Escape in settings
+        // using Esc key
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Escape') {
                 // If settings is open, close settings
@@ -137,7 +158,6 @@ export default class UIManager {
                     this.hidePauseOverlay();
                     this.game.resumeGame();
                 }
-                // If in main menu, Escape does nothing or could close menu?
             }
         });
 
@@ -149,7 +169,7 @@ export default class UIManager {
         this._setupTouchButton(this.btnBlock, 'block');
     }
 
-    // Helper to detect visibility
+
     isSettingsVisible() {
         return this.settingsScreen && !this.settingsScreen.classList.contains('hidden');
     }
@@ -161,26 +181,20 @@ export default class UIManager {
     }
 
     onSettingsBack() {
-        // Return from settings to parent screen
         if (this._settingsParent === 'menu') {
-            // Came from main menu: hide settings, show main menu
             this.hideSettings();
             this.showMainMenu();
         } else if (this._settingsParent === 'pause') {
-            // Came from pause overlay: hide settings, show pause overlay, remain paused
             this.hideSettings();
             this.showPauseOverlay();
-            // game remains paused; resume only when user clicks Resume
         }
         this._settingsParent = null;
     }
     onInstructionsBack() {
-        // Similar logic for instructions: track parent if needed; here likely always menu
         if (this._instructionsParent === 'menu') {
             this.hideInstructions();
             this.showMainMenu();
         }
-        // Could handle if instructions from pause, but less common
         this._instructionsParent = null;
     }
 
@@ -190,9 +204,8 @@ export default class UIManager {
     }
 
     showSettings(parent) {
-        // parent is 'menu' or 'pause'
         this._settingsParent = parent;
-        // If opening from pause, ensure game is paused
+        // opening from pause
         if (parent === 'pause' && this.game.isRunning() && !this.game.isPaused()) {
             this.game.pauseGame();
         }
@@ -213,7 +226,6 @@ export default class UIManager {
     }
 
     showPauseOverlay() {
-        // Only if game is running
         if (this.pauseOverlay) this.pauseOverlay.classList.remove('hidden');
     }
     hidePauseOverlay() {
@@ -222,7 +234,10 @@ export default class UIManager {
 
     _saveSettings() {
         const settings = {
-            volume: parseFloat(this.volumeRange.value),
+            masterVolume: parseFloat(this.masterVolumeRange.value),
+            musicVolume: parseFloat(this.musicVolumeRange.value),
+            sfxVolume: parseFloat(this.sfxVolumeRange.value),
+            muted: this.muteToggle.checked,
             touchToggle: this.touchToggle.value,
             difficulty: this.difficultySelect.value,
         };
@@ -230,13 +245,33 @@ export default class UIManager {
     }
     _loadSettings() {
         const settings = JSON.parse(localStorage.getItem('stickmanSettings') || '{}');
-        if (settings.volume != null) {
-            this.volumeRange.value = settings.volume;
-            this.game.setVolume(settings.volume);
+        // Master volume
+        if (settings.masterVolume != null) {
+            this.masterVolumeRange.value = settings.masterVolume;
         } else {
-            this.volumeRange.value = 0.5;
-            this.game.setVolume(0.5);
+            this.masterVolumeRange.value = 0.5;
         }
+        // Music volume
+        if (settings.musicVolume != null) {
+            this.musicVolumeRange.value = settings.musicVolume;
+        } else {
+            this.musicVolumeRange.value = 0.5;
+        }
+        // SFX volume
+        if (settings.sfxVolume != null) {
+            this.sfxVolumeRange.value = settings.sfxVolume;
+        } else {
+            this.sfxVolumeRange.value = 0.5;
+        }
+        // Mute
+        if (settings.muted != null) {
+            this.muteToggle.checked = settings.muted;
+        } else {
+            this.muteToggle.checked = false;
+        }
+
+        this._applyMuteAndVolumes();
+
         if (settings.touchToggle) {
             this.touchToggle.value = settings.touchToggle;
         }
@@ -253,7 +288,7 @@ export default class UIManager {
         else if (mode === 'off') show = false;
         else if (mode === 'auto') show = isTouchDevice;
 
-        // Only show controls during active gameplay (not in menus or pause/settings)
+        // show control in game only
         if (show
             && this.game.isRunning()
             && !this.game.isPaused()
@@ -289,6 +324,21 @@ export default class UIManager {
             e.preventDefault();
             this.game.onVirtualButtonUp(action);
         });
+    }
+
+    _applyMuteAndVolumes() {
+        const isMuted = this.muteToggle.checked;
+        if (isMuted) {
+            this.game.setMasterVolume(0);
+        } else {
+            const masterVol = parseFloat(this.masterVolumeRange.value);
+            this.game.setMasterVolume(masterVol);
+
+            const musicVol = parseFloat(this.musicVolumeRange.value);
+            const sfxVol = parseFloat(this.sfxVolumeRange.value);
+            this.game.setMusicVolume(musicVol);
+            this.game.setSFXVolume(sfxVol);
+        }
     }
 
     hideAllScreens() {

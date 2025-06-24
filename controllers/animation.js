@@ -50,22 +50,10 @@ export class AnimationController {
     draw(ctx, x, y, width, height, facingRight = true) {
         const anim = this.animationsConfig[this.current];
         if (!anim) {
-            // console.warn(`[AnimationController] No animationConfig for key='${this.current}'`);
             ctx.fillStyle = '#888';
             ctx.fillRect(x, y, width, height);
             return;
         }
-
-        // const frameIndex = this.frameIndex;
-        // const imageKeys = anim.imageKeys;
-        // // Log the array and index if out of bounds
-        // if (!Array.isArray(imageKeys)) {
-        //     console.warn(`[AnimationController] imageKeys for animation='${this.current}' is not an array:`, imageKeys);
-        // }
-        // if (frameIndex < 0 || frameIndex >= imageKeys.length) {
-        //     console.warn(`[AnimationController] frameIndex out of bounds for animation='${this.current}': frameIndex=${frameIndex}, imageKeys.length=${imageKeys.length}`);
-        // }
-
 
         const imageKey = anim.imageKeys[this.frameIndex];
         const img = this.assetLoader.getImage(imageKey);
@@ -85,19 +73,4 @@ export class AnimationController {
             ctx.restore();
         }
     }
-
-    // drawPlaceholder(ctx, x, y, width, height, facingRight = true) {
-    //     const anim = this.animations[this.current];
-    //     if (!anim) {
-    //         ctx.fillStyle = '#888';
-    //     } else {
-    //         ctx.fillStyle = anim.color;
-    //     }
-    //     ctx.fillRect(x, y, width, height);
-
-    //     // Optional: draw a small indicator of frameIndex
-    //     ctx.fillStyle = '#000';
-    //     ctx.font = '10px sans-serif';
-    //     ctx.fillText(this.current + ':' + this.frameIndex, x, y + height / 2);
-    // }
 }

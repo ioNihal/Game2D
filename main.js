@@ -1,4 +1,3 @@
-// main.js
 import InputHandler from "./controllers/input.js";
 import AssetLoader from "./utils/assetLoader.js";
 import { ANIMATION_CONFIG } from "./configs/animationConfig.js";
@@ -6,24 +5,52 @@ import Fighter from "./controllers/fighter.js";
 import { CONFIG } from "./configs/config.js";
 import { ATTACKS } from "./configs/attack.js";
 import AIController from "./controllers/ai.js";
-import UIManager from "./ui.js";  // import the UI manager
+import UIManager from "./ui.js";
+import AudioManager from "./utils/audioManager.js";
+
+(function () {
+  const overlay = document.getElementById('rotateOverlay');
+  if (!overlay) return;
+
+  // Track if we paused due to rotate, if you want to auto-pause/resume:
+  let pausedByRotate = false;
+
+  function checkOrientation() {
+    const isPortrait = window.matchMedia("(orientation: portrait)").matches;
+    if (isPortrait) {
+      overlay.style.display = 'flex';
+      if (window.game && game.isRunning && game.isRunning() && !game.isPaused()) {
+        game.pauseGame();
+        pausedByRotate = true;
+      }
+    } else {
+      overlay.style.display = 'none';
+      if (window.game && pausedByRotate) {
+        game.resumeGame();
+        pausedByRotate = false;
+      }
+    }
+  }
+  window.addEventListener('load', checkOrientation);
+  window.addEventListener('resize', checkOrientation);
+  window.addEventListener('orientationchange', checkOrientation);
+  document.addEventListener('DOMContentLoaded', checkOrientation);
+})();
 
 class Game {
   constructor() {
-    // Canvas setup
     this.canvas = document.getElementById('gameCanvas');
     this.ctx = this.canvas.getContext('2d');
-    this.canvas.width = CONFIG.canvasWidth;    // or CANVAS_WIDTH
+    this.canvas.width = CONFIG.canvasWidth;
     this.canvas.height = CONFIG.canvasHeight;
 
     // Input and virtual inputs
     this.input = new InputHandler();
-    this.virtualInputs = {}; // for mobile controls, if used
+    this.virtualInputs = {}; //for mobiles!!
 
     // Asset loader
     this.assetLoader = new AssetLoader();
-
-    // Reference to UIManager; pass this game instance
+    this.audioManager = new AudioManager();
     this.ui = new UIManager(this);
 
     // Game state flags
@@ -32,12 +59,31 @@ class Game {
     this.gameOver = false;
     this.winner = null;
 
-    // Bind methods
+
     this._gameLoop = this._gameLoop.bind(this);
 
     // Preload assets, then show menu
     this._preloadAssets();
+    this._preloadAudio();
   }
+
+  async _preloadAudio() {
+    const audioList = [
+      { key: 'bgm_fight', urls: ['assets/sfx/bgm/bgm_fight.mp3', 'assets/sfx/bgm/bgm_fight.ogg'] },
+      { key: 'jump', urls: ['assets/sfx/jump/sfx_jump.mp3', 'assets/sfx/jump/sfx_jump.ogg'] },
+      { key: 'punch', urls: ['assets/sfx/punch/sfx_punch.mp3', 'assets/sfx/punch/sfx_punch.ogg'] },
+      { key: 'hit', urls: ['assets/sfx/hit/sfx_hit.mp3', 'assets/sfx/hit/sfx_hit.ogg'] },
+      { key: 'block', urls: ['assets/sfx/block/sfx_block.mp3', 'assets/sfx/block/sfx_block.ogg'] },
+      { key: 'ko', urls: ['assets/sfx/ko/sfx_ko.mp3', 'assets/sfx/ko/sfx_ko.ogg'] },
+    ];
+    try {
+      await this.audioManager.loadAudioList(audioList);
+
+    } catch (err) {
+      console.error('Audio preload error:', err);
+    }
+  }
+
 
   _preloadAssets() {
     // Build image lists
@@ -60,18 +106,14 @@ class Game {
     // Start loading
     this.assetLoader.loadImages(allImageList)
       .then(() => {
-        console.log('Images Loaded');
-        // After assets are loaded, show the menu screen. UIManager.showMenu() was already called in constructor.
-        // We do NOT start the game loop yet; wait for user to click “Start Game”.
-        // Optionally, you could display “Tap Start” or remove a loading overlay here.
+        // console.log('Images Loaded');
       })
       .catch(err => console.error("Asset load error:", err));
   }
 
-  // Called by UIManager when user clicks "Start Game"
+
   startGame() {
     if (this._running) {
-      console.log('startGame: already running, ignoring.');
       return;
     }
     // Reset or initialize game objects
@@ -82,12 +124,17 @@ class Game {
     this.gameOver = false;
     this.winner = null;
 
+    this.audioManager.resumeContext().then(() => {
+      this.audioManager.playMusic('bgm_fight', { volume: 0.5, loop: true });
+    });
+
+
     // Start the loop
     this._lastTimestamp = null;
     this._rafId = requestAnimationFrame(this._gameLoop);
   }
 
-  // Called by UIManager when user chooses to quit to menu
+
   stopGame() {
     this._running = false;
     this._paused = false;
@@ -95,7 +142,6 @@ class Game {
       cancelAnimationFrame(this._rafId);
       this._rafId = null;
     }
-    // Optionally clear or reset anything if needed.
   }
 
   pauseGame() {
@@ -116,12 +162,19 @@ class Game {
     return this._paused;
   }
 
-  setVolume(vol) {
-    // Implement audio volume control if you have audio manager
-    // e.g., this.audioManager.setVolume(vol);
+  setMasterVolume(val) {
+    if (this.audioManager) this.audioManager.setMasterVolume(val);
   }
+  setMusicVolume(val) {
+    if (this.audioManager) this.audioManager.setMusicVolume(val);
+  }
+  setSFXVolume(val) {
+    if (this.audioManager) this.audioManager.setSFXVolume(val);
+  }
+
+
   setDifficulty(val) {
-    console.log('Setting difficulty to', val);
+    // console.log('Setting difficulty to', val);
     if (this.enemyAI) {
       switch (val) {
         case 'easy':
@@ -148,7 +201,6 @@ class Game {
 
   onVirtualButtonDown(action) {
     // Map virtual action names to input keys in InputHandler
-    // Example: 'left' → ArrowLeft, 'right'→ArrowRight, 'jump'→ArrowUp, 'attack'→KeyJ, 'block'→KeyK
     switch (action) {
       case 'left':
         this.input.setVirtualKeyDown('ArrowLeft');
@@ -188,7 +240,6 @@ class Game {
   }
 
   _initGameObjects() {
-    // Build animationsConfig helper
     const buildAnimationsConfig = (charKey) => {
       const anims = ANIMATION_CONFIG[charKey];
       const animationsConfig = {};
@@ -222,18 +273,20 @@ class Game {
       attacks: ATTACKS,
       maxHealth: 100,
       assetLoader: this.assetLoader,
+      audioManager: this.audioManager,
       animationsConfig: playerAnimations
     });
     this.enemy = new Fighter({
       name: 'Enemy',
       charKey: 'enemy',
-      x: CONFIG.canvasWidth - 100 - 250, // for example
+      x: CONFIG.canvasWidth - 100 - 250, //i used a bad image with big paddings, and i am lazy
       y: CONFIG.groundY - 280,
       width: 250,
       height: 280,
       attacks: ATTACKS,
       maxHealth: 100,
       assetLoader: this.assetLoader,
+      audioManager: this.audioManager,
       animationsConfig: enemyAnimations
     });
 
@@ -248,17 +301,16 @@ class Game {
     // Hitboxes array
     this.hitboxes = [];
 
-    // Other arrays: projectiles or floatingTexts if you use them
+    // projectiles and floatingTexts
     this.projectiles = [];
     this.floatingTexts = [];
 
-    // Reset gameOver/winner if needed
+    // Reset gameOver/winner
     this.gameOver = false;
     this.winner = null;
   }
 
   _gameLoop(timestamp) {
-    console.log('gameLoop tick. running=', this._running, 'paused=', this._paused);
     if (!this._running) return; // stop the loop if game is stopped
     if (this._paused) {
       this._draw();
@@ -266,14 +318,11 @@ class Game {
       return;
     }
 
-    // Merge virtual inputs if any (InputHandler handles virtual keys via setVirtualKeyDown/Up)
-    // No extra merging needed if InputHandler methods manage justPressed and keys.
-
     // Update fighters and hitboxes
     if (!this.gameOver) {
       this.player.update(this.input);
       this.enemyAI.update();
-      this.enemy.update(); // or null if AIInput handled internally
+      this.enemy.update();
 
       // Handle pending hitboxes from fighters
       if (this.player.pendingHitbox) {
@@ -303,7 +352,7 @@ class Game {
       }
     }
 
-    // Update input (clears justPressed, updates buffer, etc.)
+    // Update input
     this.input.update();
 
     // Loop
@@ -333,27 +382,28 @@ class Game {
     this.ctx.fillRect(0, 0, CONFIG.canvasWidth, CONFIG.canvasHeight);
 
     // Draw ground
-    this.ctx.fillStyle = '#FFF';
+    this.ctx.fillStyle = '#CCC';
     this.ctx.fillRect(0, CONFIG.groundY, CONFIG.canvasWidth, CONFIG.canvasHeight - CONFIG.groundY);
 
     // Draw fighters
     this.player.draw(this.ctx);
     this.enemy.draw(this.ctx);
 
-    // Draw hitboxes debug if desired
-    // for (const hb of this.hitboxes) hb.drawDebug(this.ctx);
+    // // Draw hitboxes debug if desired
+    // for (const hb of this.hitboxes) {
+    //   hb.drawDebug(this.ctx);
+    // }
 
     // Draw UI: health bars etc.
     this._drawUI();
+    this.ctx.fillStyle = '#111';
+    this.ctx.fillRect(0, CONFIG.groundY, this.player.width - 130, 100);
+    this.ctx.fillRect(CONFIG.canvasWidth - this.player.width + 150, CONFIG.groundY, this.player.width - 130, 100);
 
     // If gameOver, overlay Game Over text
     if (this.gameOver) {
       this._drawGameOver();
     }
-
-    // Floating texts, projectiles, etc., if implemented
-    // this._drawFloatingTexts();
-    // this._drawProjectiles();
   }
 
   _drawUI() {
@@ -383,8 +433,8 @@ class Game {
     // Text labels
     this.ctx.fillStyle = 'white';
     this.ctx.font = '14px sans-serif';
-    this.ctx.fillText('You', padding, padding + barHeight + 15);
-    this.ctx.fillText('Enemy', CONFIG.canvasWidth - barWidth - padding - 10, padding + barHeight + 15);
+    this.ctx.fillText('You', padding, padding + barHeight + 20);
+    this.ctx.fillText('Enemy', CONFIG.canvasWidth - barWidth - padding, padding + barHeight + 20);
   }
 
   _drawHealthBar(x, y, width, height, currentHealth, maxHealth, fillColor) {
@@ -414,11 +464,15 @@ class Game {
 
   _checkGameOver() {
     if (this.player.state === 'ko') {
-      this.gameOver = true;
-      this.winner = 'enemy';
+      setTimeout(() => {
+        this.gameOver = true;
+        this.winner = 'enemy';
+      }, 3000)
     } else if (this.enemy.state === 'ko') {
-      this.gameOver = true;
-      this.winner = 'player';
+      setTimeout(() => {
+        this.gameOver = true;
+        this.winner = 'player';
+      }, 3000);
     }
   }
 
@@ -448,5 +502,4 @@ class Game {
 // On window load, instantiate Game
 window.addEventListener('load', () => {
   const game = new Game();
-  // UIManager was instantiated inside Game; menu screen is shown automatically.
 });

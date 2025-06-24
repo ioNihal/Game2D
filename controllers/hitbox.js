@@ -41,7 +41,6 @@ export default class Hitbox {
         const tb =  target.getHurtboxBounds();
 
         //AABB collison
-
         if (
             hb.x < tb.x + tb.width &&
             hb.x + hb.width > tb.x &&
@@ -57,7 +56,7 @@ export default class Hitbox {
         this.hasHit.add(target);
     }
 
-    //fordebug
+    //fordebuging >_-
     drawDebug(ctx) {
         const { x, y, width, height } = this.getBounds();
         ctx.save();

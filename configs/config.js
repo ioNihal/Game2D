@@ -1,6 +1,8 @@
+const container = document.getElementById('gameContainer');
+
 export const CONFIG = {
-    canvasWidth: 800,
-    canvasHeight: 450,
+    canvasWidth: container.clientWidth,
+    canvasHeight: container.clientHeight,
     groundY: 400,
     gravity: 0.7,
     walkSpeed: 3.5,

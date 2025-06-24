@@ -56,7 +56,7 @@ export const ANIMATION_CONFIG = {
             hurtbox: { offsetX: 100, offsetY: 180, width: 50, height: 100 },
         },
         block: {
-            frameCount: 1,
+            frameCount: 3,
             path: 'assets/animations/block/block',
             filePrefix: 'block',
             extension: '.png',

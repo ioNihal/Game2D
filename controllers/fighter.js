@@ -5,7 +5,11 @@ import { ANIMATION_CONFIG } from '../configs/animationConfig.js';
 
 
 export default class Fighter {
-    constructor({ name = 'Fighter', x, y, width, height, color, attacks = [], maxHealth = 100, charKey, assetLoader, animationsConfig }) {
+    constructor({
+        name = 'Fighter', x, y, width, height, color,
+        attacks = [], maxHealth = 100, charKey,
+        assetLoader, audioManager, animationsConfig
+    }) {
         this.name = name;
         this.charKey = charKey;
         this.x = x;
@@ -24,7 +28,7 @@ export default class Fighter {
         this.onGround = false;
 
         //state
-        this.state = 'idle'; //walk and jump also
+        this.state = 'idle';
         this.facingRight = true;
 
         //timers
@@ -45,6 +49,8 @@ export default class Fighter {
             console.warn('Fighter: animationsConfig not provided; animations will fail.');
         }
 
+        this.audioManager = audioManager;
+
         //Anim Controller
         if (assetLoader && animationsConfig) {
             this.animController = new AnimationController(animationsConfig, assetLoader);
@@ -54,7 +60,7 @@ export default class Fighter {
                 setAnimation: () => { },
                 update: () => { },
                 draw: (ctx, x, y, w, h, facingRight) => {
-                    // fallback: draw a simple rectangle
+                    // fallback
                     ctx.fillStyle = this.color;
                     ctx.fillRect(x, y, w, h);
                 }
@@ -232,9 +238,7 @@ export default class Fighter {
                 }
                 this.vx = 0;
                 break;
-
-
-            //other state block, knockdown,etc..
+            // other state you may have
 
             default:
                 this.enterState('idle');
@@ -262,6 +266,7 @@ export default class Fighter {
                 case 'jump_rise':
                     this.vy = CONFIG.jumpVelocity;
                     this.onGround = false;
+                    if (this.audioManager) this.audioManager.playSFX('jump');
                     break;
                 case 'jump_fall':
                     break;
@@ -285,7 +290,6 @@ export default class Fighter {
             console.warn('Attack not found', attackName);
             return;
         }
-
         this.currentAttack = atk;
         this.enterState('attack_startup');
     }
@@ -298,8 +302,7 @@ export default class Fighter {
             offsetX = animCfg.hurtbox.offsetX;
             offsetY = animCfg.hurtbox.offsetY;
             w = animCfg.hurtbox.width;
-            h = animCfg.hurtbox.height
-                ;
+            h = animCfg.hurtbox.height;
         }
 
         let x;
@@ -359,16 +362,14 @@ export default class Fighter {
             knockbackY: atk.knockbackY,
             durationFrames: duration,
         });
+        if (this.audioManager) this.audioManager.playSFX('punch');
 
         this.pendingHitbox = hb;
     }
 
     removeHitbox() {
-        // After active frames, we rely on duration expiry; nothing special needed here.
-        // But if you wanted immediate removal: set pendingHitbox = null or mark hb.age = duration to expire next update.
+        // we rely on duration expiry, but you can do something here, like imediate removal :)
     }
-
-
 
     applyPhysics() {
         //apply gravity
@@ -384,7 +385,7 @@ export default class Fighter {
             this.vy = 0;
             this.onGround = true;
 
-            //if landing fallback to idle/walk
+            //if landing? fallback to idle/walk
             if (this.state === 'jump_fall') {
                 this.enterState('idle');
             }
@@ -419,28 +420,13 @@ export default class Fighter {
                 case 'ko': animKey = 'ko'; break;
             }
         }
-        //   console.log(`[Fighter ${this.name}] state='${this.state}', chosen animKey='${animKey}', previous anim='${this.animController.current}'`);
+
         this.animController.setAnimation(animKey);
         this.animController.update();
     }
 
     draw(ctx) {
         this.animController.draw(ctx, this.x, this.y, this.width, this.height, this.facingRight);
-
-        const hb = this.getHurtboxBounds();
-
-        ctx.fillStyle = 'white';
-        ctx.font = '12px sans-serif';
-        ctx.fillText(this.state, hb.x, hb.y - 5);
-
-        // Hurtbox debug
-        
-        ctx.save();
-        ctx.strokeStyle = 'blue';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(hb.x, hb.y, hb.width, hb.height);
-        ctx.restore();
-
     }
 
     takeHit(damage, kbX, kbY) {
@@ -455,6 +441,7 @@ export default class Fighter {
             this.stunTimer = CONFIG.blockStunFrames;
 
             this.blockHitTimer = CONFIG.blockHitFrames || 6;
+            if (this.audioManager) this.audioManager.playSFX('block');
             this.enterState('block');
         } else {
             this.health = (this.health ?? this.maxHealth) - damage;
@@ -462,9 +449,11 @@ export default class Fighter {
             this.vy = kbY;
             if (this.health <= 0) {
                 this.health = 0;
+                if (this.audioManager) this.audioManager.playSFX('ko');
                 this.enterState('ko');
             } else {
                 this.stunTimer = CONFIG.hitStunFrames;
+                if (this.audioManager) this.audioManager.playSFX('hit');
                 this.enterState('hitstun');
             }
         }

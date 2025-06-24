@@ -10,7 +10,7 @@ export const ATTACKS = [
     knockbackX: 5,
     knockbackY: -3,
     animKey: 'lightPunch',
-    offsetX: 135,    // relative to fighter.x; adjust later
+    offsetX: 135,    
     offsetY: 225,
     width: 30,
     height: 20,
@@ -32,5 +32,5 @@ export const ATTACKS = [
     height: 20,
     cooldownExtra: 5,
   },
-  // Add more attacks (heavyPunch, kicks, etc.)
+  // more attack please....
 ];
