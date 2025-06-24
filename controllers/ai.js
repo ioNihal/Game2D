@@ -1,4 +1,4 @@
-import { CONFIG } from "./config.js";
+import { CONFIG } from "../configs/config.js";
 
 export default class AIController {
     constructor(fighter, opponent, config = {}) {

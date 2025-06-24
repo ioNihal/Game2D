@@ -1,7 +1,7 @@
-import { CONFIG } from './config.js';
+import { CONFIG } from '../configs/config.js';
 import { AnimationController, ANIMATIONS } from './animation.js';
 import Hitbox from './hitbox.js';
-import { ANIMATION_CONFIG } from './animationConfig.js';
+import { ANIMATION_CONFIG } from '../configs/animationConfig.js';
 
 
 export default class Fighter {

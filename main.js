@@ -1,11 +1,10 @@
-import InputHandler from "./input.js";
-import AssetLoader from "./assetLoader.js";
-import { ANIMATION_CONFIG } from "./animationConfig.js";
-import Fighter from "./fighter.js";
-import { CONFIG } from "./config.js";
-import { ATTACKS } from "./attack.js";
-
-import AIController from "./ai.js";
+import InputHandler from "./controllers/input.js";
+import AssetLoader from "./utils/assetLoader.js";
+import { ANIMATION_CONFIG } from "./config/animationConfig.js";
+import Fighter from "./controllers/fighter.js";
+import { CONFIG } from "./configs/config.js";
+import { ATTACKS } from "./configs/attack.js";
+import AIController from "./controllers/ai.js";
 
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 450;
@@ -101,7 +100,7 @@ const startGame = () => {
     })
 
     const enemyAI = new AIController(enemy, player, {
-        preferredRange:80,
+        preferredRange: 80,
         blockProbability: 0.5,
         retreatProbability: 0.01,
         jumpProbability: 0.005,
