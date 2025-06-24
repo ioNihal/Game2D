@@ -2,7 +2,7 @@ export default class UIManager {
     constructor(game) {
         this.game = game;
 
-        // Screen
+        // Screen elements
         this.menuScreen = document.getElementById('menuScreen');
         this.settingsScreen = document.getElementById('settingsScreen');
         this.instructionsScreen = document.getElementById('instructionsScreen');
@@ -10,7 +10,7 @@ export default class UIManager {
         this.mobileControls = document.getElementById('mobileControls');
         this.gameContainer = document.getElementById('gameContainer');
 
-        //Buttons
+        // Buttons
         this.startButton = document.getElementById('startButton');
         this.settingsButton = document.getElementById('settingsButton');
         this.instructionsButton = document.getElementById('instructionsButton');
@@ -32,6 +32,9 @@ export default class UIManager {
         this.btnAttack = document.getElementById('btnAttack');
         this.btnBlock = document.getElementById('btnBlock');
 
+        // Track from where settings was opened: 'menu' or 'pause'
+        this._settingsParent = null;
+
         // Bind events
         this._bindEvents();
 
@@ -48,59 +51,97 @@ export default class UIManager {
     }
 
     _bindEvents() {
+        // Start game from main menu
         this.startButton.addEventListener('click', () => {
-            this.showGameScreen();
+            this.hideAllScreens();
             this.game.startGame();
         });
 
-        this.settingsButton.addEventListener('click', () => this.showSettings());
-        this.instructionsButton.addEventListener('click', () => this.showInstructions());
-        this.settingsBackButton.addEventListener('click', () => this.showMenu());
-        this.instructionsBackButton.addEventListener('click', () => this.showMenu());
+        // Main menu -> Settings
+        this.settingsButton.addEventListener('click', () => {
+            // Only from menu (game not running) or from pause? This is main menu button.
+            if (!this.game.isRunning()) {
+                this.showSettings('menu');
+            }
+        });
+        this.instructionsButton.addEventListener('click', () => {
+            if (!this.game.isRunning()) {
+                this.showInstructions('menu');
+            }
+        });
 
+        // Settings Back button
+        this.settingsBackButton.addEventListener('click', () => {
+            this.onSettingsBack();
+        });
+        // Instructions Back
+        this.instructionsBackButton.addEventListener('click', () => {
+            this.onInstructionsBack();
+        });
+
+        // PauseOverlay buttons
         this.resumeButton.addEventListener('click', () => {
-            this.hidePause();
-            this.game.resumeButton();
+            this.hidePauseOverlay();
+            this.game.resumeGame();
         });
-
+        // Pause -> Settings
         this.pauseSettingsButton.addEventListener('click', () => {
-            this.showSettings(true);
+            // From pause overlay
+            if (this.game.isRunning() && this.game.isPaused()) {
+                this.showSettings('pause');
+            }
         });
-
         this.quitButton.addEventListener('click', () => {
-            this.hidePause();
-            this.showMenu();
+            // Quit to menu
+            this.hidePauseOverlay();
             this.game.stopGame();
+            this.showMainMenu();
         });
 
-        // settings change
+        // Settings changes
         this.volumeRange.addEventListener('input', () => {
             const vol = parseFloat(this.volumeRange.value);
             this.game.setVolume(vol);
             this._saveSettings();
         });
-
         this.touchToggle.addEventListener('change', () => {
-            this.game.setDifficulty(this._bindEvents.difficultySelect.value);
+            this._saveSettings();
+            this._updateMobileControlsVisibility();
+        });
+        this.difficultySelect.addEventListener('change', () => {
+            this.game.setDifficulty(this.difficultySelect.value);
             this._saveSettings();
         });
 
-
-        // pause via keyboard (escape btn)
+        // Pause via Escape key and Escape in settings
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Escape') {
+                // If settings is open, close settings
+                if (this.isSettingsVisible()) {
+                    this.onSettingsBack();
+                    return;
+                }
+                // If instructions is open, close instructions
+                if (this.isInstructionsVisible()) {
+                    this.onInstructionsBack();
+                    return;
+                }
+                // If game running and not paused: open pause overlay
                 if (this.game.isRunning() && !this.game.isPaused()) {
-                    this.showPause();
+                    this.showPauseOverlay();
                     this.game.pauseGame();
-                } else if (this.game.isRunning() && this.game.isPaused()) {
-                    this.hidePause();
+                }
+                // If game running and paused: resume
+                else if (this.game.isRunning() && this.game.isPaused()
+                    && this.isPauseOverlayVisible()) {
+                    this.hidePauseOverlay();
                     this.game.resumeGame();
                 }
+                // If in main menu, Escape does nothing or could close menu?
             }
         });
 
-
-        // Mobile cntrl events
+        // Mobile control events
         this._setupTouchButton(this.btnLeft, 'left');
         this._setupTouchButton(this.btnRight, 'right');
         this._setupTouchButton(this.btnJump, 'jump');
@@ -108,52 +149,75 @@ export default class UIManager {
         this._setupTouchButton(this.btnBlock, 'block');
     }
 
-    _setupTouchButton(elem, action) {
-        elem.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.game.onVirtualButtonDown(action);
-        });
-        elem.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            this.game.onVirtualButtonUp(action);
-        });
-
-        // For testing on desktop
-        elem.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            this.game.onVirtualButtonDown(action);
-        });
-        elem.addEventListener('mouseup', (e) => {
-            e.preventDefault();
-            this.game.onVirtualButtonUp(action);
-        });
-
-        // If pointer leaves button while pressed
-        elem.addEventListener('mouseleave', (e) => {
-            e.preventDefault();
-            this.game.onVirtualButtonUp(action);
-        });
-
+    // Helper to detect visibility
+    isSettingsVisible() {
+        return this.settingsScreen && !this.settingsScreen.classList.contains('hidden');
+    }
+    isInstructionsVisible() {
+        return this.instructionsScreen && !this.instructionsScreen.classList.contains('hidden');
+    }
+    isPauseOverlayVisible() {
+        return this.pauseOverlay && !this.pauseOverlay.classList.contains('hidden');
     }
 
-    _loadSettings() {
-        const settings = JSON.parse(localStorage.getItem('stickmanSettings') || '{}');
-        if (settings.volume != null) {
-            this.volumeRange.value = settings.volume;
-            this.game.setVolume(settings.volume);
-        } else {
-            this.volumeRange.value = 0.5;
-            this.game.setVolume(0.5);
+    onSettingsBack() {
+        // Return from settings to parent screen
+        if (this._settingsParent === 'menu') {
+            // Came from main menu: hide settings, show main menu
+            this.hideSettings();
+            this.showMainMenu();
+        } else if (this._settingsParent === 'pause') {
+            // Came from pause overlay: hide settings, show pause overlay, remain paused
+            this.hideSettings();
+            this.showPauseOverlay();
+            // game remains paused; resume only when user clicks Resume
         }
+        this._settingsParent = null;
+    }
+    onInstructionsBack() {
+        // Similar logic for instructions: track parent if needed; here likely always menu
+        if (this._instructionsParent === 'menu') {
+            this.hideInstructions();
+            this.showMainMenu();
+        }
+        // Could handle if instructions from pause, but less common
+        this._instructionsParent = null;
+    }
 
-        if (settings.touchToggle) {
-            this.touchToggle.value = settings.touchToggle;
-        }
+    showMainMenu() {
+        this.hideAllScreens();
+        if (this.menuScreen) this.menuScreen.classList.remove('hidden');
+    }
 
-        if (settings.difficulty) {
-            this.difficultySelect.value = settings.difficulty;
-            this.game.setDifficulty(settings.difficulty);
+    showSettings(parent) {
+        // parent is 'menu' or 'pause'
+        this._settingsParent = parent;
+        // If opening from pause, ensure game is paused
+        if (parent === 'pause' && this.game.isRunning() && !this.game.isPaused()) {
+            this.game.pauseGame();
         }
+        this.hideAllScreens();
+        if (this.settingsScreen) this.settingsScreen.classList.remove('hidden');
+    }
+    hideSettings() {
+        if (this.settingsScreen) this.settingsScreen.classList.add('hidden');
+    }
+
+    showInstructions(parent) {
+        this._instructionsParent = parent;
+        this.hideAllScreens();
+        if (this.instructionsScreen) this.instructionsScreen.classList.remove('hidden');
+    }
+    hideInstructions() {
+        if (this.instructionsScreen) this.instructionsScreen.classList.add('hidden');
+    }
+
+    showPauseOverlay() {
+        // Only if game is running
+        if (this.pauseOverlay) this.pauseOverlay.classList.remove('hidden');
+    }
+    hidePauseOverlay() {
+        if (this.pauseOverlay) this.pauseOverlay.classList.add('hidden');
     }
 
     _saveSettings() {
@@ -164,7 +228,23 @@ export default class UIManager {
         };
         localStorage.setItem('stickmanSettings', JSON.stringify(settings));
     }
-
+    _loadSettings() {
+        const settings = JSON.parse(localStorage.getItem('stickmanSettings') || '{}');
+        if (settings.volume != null) {
+            this.volumeRange.value = settings.volume;
+            this.game.setVolume(settings.volume);
+        } else {
+            this.volumeRange.value = 0.5;
+            this.game.setVolume(0.5);
+        }
+        if (settings.touchToggle) {
+            this.touchToggle.value = settings.touchToggle;
+        }
+        if (settings.difficulty) {
+            this.difficultySelect.value = settings.difficulty;
+            this.game.setDifficulty(settings.difficulty);
+        }
+    }
     _updateMobileControlsVisibility() {
         const mode = this.touchToggle.value;
         const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -172,33 +252,48 @@ export default class UIManager {
         if (mode === 'on') show = true;
         else if (mode === 'off') show = false;
         else if (mode === 'auto') show = isTouchDevice;
-        if (show) {
+
+        // Only show controls during active gameplay (not in menus or pause/settings)
+        if (show
+            && this.game.isRunning()
+            && !this.game.isPaused()
+            && !this.isSettingsVisible()
+            && !this.isInstructionsVisible()
+            && !this.isPauseOverlayVisible()
+        ) {
             this.mobileControls.classList.remove('hidden');
         } else {
             this.mobileControls.classList.add('hidden');
         }
     }
 
-    showMenu() {
-        this._hideAllScreens();
-        this.menuScreen.classList.remove('hidden');
+    _setupTouchButton(elem, action) {
+        if (!elem) return;
+        elem.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.game.onVirtualButtonDown(action);
+        });
+        elem.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            this.game.onVirtualButtonUp(action);
+        });
+        elem.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            this.game.onVirtualButtonDown(action);
+        });
+        elem.addEventListener('mouseup', (e) => {
+            e.preventDefault();
+            this.game.onVirtualButtonUp(action);
+        });
+        elem.addEventListener('mouseleave', (e) => {
+            e.preventDefault();
+            this.game.onVirtualButtonUp(action);
+        });
     }
 
-    showSettings(fromPause = false) {
-        this._hideAllScreens();
-    }
-
-    showPause() {
-        this.pauseOverlay.classList.remove('hidden');
-    }
-
-    hidePause() {
-        this.pauseOverlay.classList.add('hidden');
-    }
-
-    _hideAllScreens() {
+    hideAllScreens() {
         [this.menuScreen, this.settingsScreen, this.instructionsScreen, this.pauseOverlay].forEach(el => {
-            el.classList.add('hidden');
+            if (el) el.classList.add('hidden');
         });
     }
 }

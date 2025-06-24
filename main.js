@@ -70,6 +70,10 @@ class Game {
 
   // Called by UIManager when user clicks "Start Game"
   startGame() {
+    if (this._running) {
+      console.log('startGame: already running, ignoring.');
+      return;
+    }
     // Reset or initialize game objects
     this._initGameObjects();
 
@@ -80,13 +84,17 @@ class Game {
 
     // Start the loop
     this._lastTimestamp = null;
-    requestAnimationFrame(this._gameLoop);
+    this._rafId = requestAnimationFrame(this._gameLoop);
   }
 
   // Called by UIManager when user chooses to quit to menu
   stopGame() {
     this._running = false;
     this._paused = false;
+    if (this._rafId) {
+      cancelAnimationFrame(this._rafId);
+      this._rafId = null;
+    }
     // Optionally clear or reset anything if needed.
   }
 
@@ -113,10 +121,28 @@ class Game {
     // e.g., this.audioManager.setVolume(vol);
   }
   setDifficulty(val) {
-    // Pass difficulty to AIController or other game parameters
+    console.log('Setting difficulty to', val);
     if (this.enemyAI) {
-      this.enemyAI.setDifficulty?.(val);
-      // Or adjust parameters directly if you expose them
+      switch (val) {
+        case 'easy':
+          this.enemyAI.preferredRange = 100;
+          this.enemyAI.blockProbability = 0.3;
+          this.enemyAI.retreatProbability = 0.02;
+          this.enemyAI.jumpProbability = 0.01;
+          break;
+        case 'normal':
+          this.enemyAI.preferredRange = 80;
+          this.enemyAI.blockProbability = 0.5;
+          this.enemyAI.retreatProbability = 0.01;
+          this.enemyAI.jumpProbability = 0.005;
+          break;
+        case 'hard':
+          this.enemyAI.preferredRange = 60;
+          this.enemyAI.blockProbability = 0.7;
+          this.enemyAI.retreatProbability = 0.005;
+          this.enemyAI.jumpProbability = 0.01;
+          break;
+      }
     }
   }
 
@@ -232,11 +258,11 @@ class Game {
   }
 
   _gameLoop(timestamp) {
+    console.log('gameLoop tick. running=', this._running, 'paused=', this._paused);
     if (!this._running) return; // stop the loop if game is stopped
     if (this._paused) {
-      // Draw frozen frame or overlay
-      this._draw(); // still draw so pause overlay is visible
-      requestAnimationFrame(this._gameLoop);
+      this._draw();
+      this._rafId = requestAnimationFrame(this._gameLoop);
       return;
     }
 
@@ -247,7 +273,7 @@ class Game {
     if (!this.gameOver) {
       this.player.update(this.input);
       this.enemyAI.update();
-      this.enemy.update(this.input); // or null if AIInput handled internally
+      this.enemy.update(); // or null if AIInput handled internally
 
       // Handle pending hitboxes from fighters
       if (this.player.pendingHitbox) {
@@ -281,7 +307,7 @@ class Game {
     this.input.update();
 
     // Loop
-    requestAnimationFrame(this._gameLoop);
+    this._rafId = requestAnimationFrame(this._gameLoop);
   }
 
   _updateHitboxes() {

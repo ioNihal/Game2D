@@ -27,7 +27,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgb(0, 0, 0);
             z-index: 10;
             /* above canvas */
         }
@@ -87,7 +87,7 @@
             left: 0;
             width: 100%;
             height: 150px;
-            pointer-events: none;
+           
             /* children receive events */
             z-index: 20;
         }
@@ -144,11 +144,11 @@
             <h1>StickMan Fighter</h1>
             <button id="startButton">Start Game</button>
             <button id="settingsButton">Settings</button>
-            <button id="intructionsButton">Instructions</button>
+            <button id="instructionsButton">Instructions</button>
         </div>
 
         <!-- Settings Screen -->
-        <div class="settingsScreen" class="screen hidden">
+        <div id="settingsScreen" class="screen hidden">
             <h2>Settings</h2>
             <form id="settingsForm" class="settings-form">
                 <label for="volumeRange">Volume:</label>
