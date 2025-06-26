@@ -220,6 +220,7 @@
      z-index: 20;
  }
 
+
  .touch-button {
      position: absolute;
      width: 60px;
@@ -233,6 +234,11 @@
      font-size: 24px;
      color: #fff;
      user-select: none;
+     transition: transform 0.2s ease;
+ }
+
+ .touch-button:active {
+    background-color: #222;
  }
 
 
