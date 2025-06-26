@@ -280,6 +280,7 @@ export default class UIManager {
 
         
         this._updateHUDVisibility();
+        this._updateMobileControlsVisibility();
 
 
         this.game.audioManager.stopMusic();
