@@ -237,7 +237,7 @@
      transition: transform 0.2s ease;
  }
 
- .touch-button:active {
+ .touch-button:active , .touch-button:active{
     background-color: #222;
  }
 
