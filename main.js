@@ -118,6 +118,8 @@ class Game {
     }
     // Reset or initialize game objects
     this._initGameObjects();
+    
+
 
     this._running = true;
     this._paused = false;
@@ -128,12 +130,13 @@ class Game {
       this.audioManager.playMusic('bgm_fight', { volume: 0.5, loop: true });
     });
 
+    
+
 
     // Start the loop
     this._lastTimestamp = null;
     this._rafId = requestAnimationFrame(this._gameLoop);
   }
-
 
   stopGame() {
     this._running = false;

@@ -20,6 +20,13 @@ export default class UIManager {
         this.pauseSettingsButton = document.getElementById('pauseSettingsButton');
         this.quitButton = document.getElementById('quitButton');
 
+        this.pauseButton = document.getElementById('pauseButton');
+
+        this.buttons = [
+            this.settingsButton, this.startButton, this.instructionsBackButton, this.instructionsButton,
+            this.settingsBackButton, this.resumeButton, this.pauseSettingsButton, this.quitButton
+        ]
+
         // Settings form elements
         this.masterVolumeRange = document.getElementById('masterVolumeRange');
         this.musicVolumeRange = document.getElementById('musicVolumeRange');
@@ -34,6 +41,8 @@ export default class UIManager {
         this.btnJump = document.getElementById('btnJump');
         this.btnAttack = document.getElementById('btnAttack');
         this.btnBlock = document.getElementById('btnBlock');
+
+        this.audio = new Audio('./assets/hover.mp3');
 
         // to know from where settings opened!
         this._settingsParent = null;
@@ -50,17 +59,67 @@ export default class UIManager {
         window.addEventListener('resize', () => {
             this._updateMobileControlsVisibility();
         });
+
+        //i added splashbgm at final so i am lazy and made constroll here wihtout context
+        this.splashBgm = new Audio('./assets/main.mp3');
+        if (this.splashBgm) this.splashBgm.loop = true;
+        this.masterVolumeRange.addEventListener('change', () => {
+            this.splashBgm.volume = this.masterVolumeRange.value;
+        })
+        this.muteToggle.addEventListener('change', () => {
+            this.splashBgm.muted = this.muteToggle.checked;
+        });
+
+
+        this.userClicked = false;
+
+        this.startButton.addEventListener('click', () => {
+            if (!this.userClicked) this.startWithoutMusic = true;
+            if (this.splashBgm.played) this.splashBgm.pause();
+            this.splashBgm.pause();
+        });
+
+
+
+        document.addEventListener('click', () => {
+            if (this.userClicked) return;
+            if (!this.menuScreen.classList.contains('hidden')) {
+                this.splashBgm.play()
+                    .then(() => { })
+                    .catch(error => console.error('Error playing audio:', error));
+            }
+            this.userClicked = true;
+        })
     }
 
     _bindEvents() {
+
+        this.buttons.forEach(btn => {
+            btn.addEventListener('mouseenter', () => {
+                if (this.userClicked) {
+                    this.audio.play()
+                        .then(() => { })
+                        .catch(error => console.error('Error playing audio:', error));
+                }
+            })
+        })
+
+
         this.startButton.addEventListener('click', () => {
             this.hideAllScreens();
+
+            this.splashBgm.pause();
+            this.splashBgm.currentTime = 0;
+
             this.game.startGame();
+
+            this._updateHUDVisibility();
         });
 
         // Main menu -> Settings
         this.settingsButton.addEventListener('click', () => {
             if (!this.game.isRunning()) {
+
                 this.showSettings('menu');
             }
         });
@@ -96,7 +155,13 @@ export default class UIManager {
             // Quit to menu
             this.hidePauseOverlay();
             this.game.stopGame();
+
+            this.game.audioManager.stopMusic();
+
             this.showMainMenu();
+
+            this.splashBgm.currentTime = 0;
+            this.splashBgm.play().catch(console.warn);
         });
 
         // Settings changes
@@ -132,6 +197,13 @@ export default class UIManager {
         this.difficultySelect.addEventListener('change', () => {
             this.game.setDifficulty(this.difficultySelect.value);
             this._saveSettings();
+        });
+
+        this.pauseButton.addEventListener('click', () => {
+            if (this.game.isRunning() && !this.game.isPaused()) {
+                this.showPauseOverlay();
+                this.game.pauseGame();
+            }
         });
 
         // using Esc key
@@ -200,7 +272,18 @@ export default class UIManager {
 
     showMainMenu() {
         this.hideAllScreens();
-        if (this.menuScreen) this.menuScreen.classList.remove('hidden');
+        if (this.menuScreen) {
+            this.menuScreen.classList.remove('hidden');
+        }
+
+        this._updateHUDVisibility();
+
+
+        this.game.audioManager.stopMusic();
+
+        // Start/restart splash BGM
+        this.splashBgm.currentTime = 0;
+        this.splashBgm.play().catch(console.warn);
     }
 
     showSettings(parent) {
@@ -280,6 +363,15 @@ export default class UIManager {
             this.game.setDifficulty(settings.difficulty);
         }
     }
+
+    _updateHUDVisibility() {
+        const inGame = this.game.isRunning() && !this.game.isPaused();
+
+        // Show pause button only when inGame
+        if (inGame) this.pauseButton.classList.remove('hidden');
+        else this.pauseButton.classList.add('hidden');
+    }
+
     _updateMobileControlsVisibility() {
         const mode = this.touchToggle.value;
         const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;

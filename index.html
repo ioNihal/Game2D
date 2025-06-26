@@ -5,6 +5,9 @@
     <meta charset="UTF-8" />
     <title>Stickman Fighter</title>
     <link rel="stylesheet" href="./style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jersey+10&display=swap" rel="stylesheet">
 </head>
 
 <body>
@@ -18,13 +21,16 @@
     </div>
     <div id="gameContainer">
         <canvas id="gameCanvas"></canvas>
+        <button id="pauseButton" class="pause-button">❚❚</button>
 
         <!-- Home screen -->
         <div id="menuScreen" class="screen">
             <h1>StickMan Fighter</h1>
-            <button id="startButton">Start Game</button>
-            <button id="settingsButton">Settings</button>
-            <button id="instructionsButton">Instructions</button>
+            <div class="btn-group">
+                <button id="startButton">Start Game</button>
+                <button id="settingsButton">Settings</button>
+                <button id="instructionsButton">About</button>
+            </div>
         </div>
 
         <!-- Settings Screen -->
@@ -67,9 +73,44 @@
 
         <!-- Instruction Screen -->
         <div id="instructionsScreen" class="screen hidden">
-            <h2>Instructions</h2>
-            <p>Use arrow keys or A/D to move, W/Up to jump, J to attack, K to block.</p>
-            <p>On mobile, use on-screen buttons.</p>
+            <h2>About</h2>
+            <p>
+                Welcome to Stickman Fighter! This is a fast-paced, endless 1v1 replayable fight game.
+                Each round pits you against an opponent in a one-on-one duel: there are no levels or stages—just you vs.
+                another combatant in an endless series of matches.
+                Hone your timing, master your moves, and see how many victories you can string together before defeat.
+                Every fight is a fresh challenge!
+            </p>
+
+            <h2>How to Play</h2>
+            <p>Use arrow keys or A/D to move left and right.</p>
+            <p>Press W or Up arrow to jump.</p>
+            <p>Press J to perform an attack.</p>
+            <p>Press K to block incoming hits.</p>
+            <p>On mobile devices, use the on-screen buttons for movement, jump, attack, and block.</p>
+            <p>Defeat your opponent to win the round. After each round, the next opponent appears—see how many wins you
+                can achieve in a row!</p>
+
+            <h2>Game Features</h2>
+            <p>
+                • Simple stickman art style with responsive controls.<br>
+                • Endless replay: each victory immediately leads into the next match.<br>
+                • AI opponent with increasing difficulty (adjustable in settings).<br>
+                • Mobile-friendly on-screen controls and desktop keyboard support.<br>
+                • Sound effects and background music enhance immersion.
+            </p>
+
+            <h2>About the Developer</h2>
+            <p>
+                Hi, I’m the solo developer behind Stickman Fighter. I built this as a learning project and passion piece
+                to explore 2D canvas-based gameplay, responsive input handling, and simple AI.
+                My goal was to create a fun, replayable one-on-one fighting experience you can pick up quickly and play
+                anywhere—on desktop or mobile.
+            </p>
+            <p>
+                I hope you enjoy the game! Feedback and suggestions are welcome—feel free to reach out or check any
+                project repository or contact info you maintain.
+            </p>
             <button id="instructionsBackButton">Back</button>
         </div>
 

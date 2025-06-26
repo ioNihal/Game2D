@@ -40,7 +40,7 @@ export default class AIController {
 
         //approach if too far
         if (absDx > this.preferredRange) {
-            //movetowards player
+            
             if (dx > 0) {
                 f.facingRight = true;
                 f.vx = CONFIG.walkSpeed;

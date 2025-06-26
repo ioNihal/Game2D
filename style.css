@@ -18,24 +18,39 @@
      height: 100%;
      display: flex;
      flex-direction: column;
-     align-items: center;
-     justify-content: center;
-     background-image: url('./assets/splash_screen.png');
-     background-size: contain;
-     background-position: 110%;
-     z-index: 10;
+     align-items: flex-start;
+     justify-content: flex-end;
+     padding: 3rem;
+     box-sizing: border-box;
 
-     
+     background-image: url('./assets/splash.png');
+     background-size: cover;
+     background-position-y: center;
+     z-index: 10;
+     user-select: none;
+     -moz-user-select: none;
+
+
+     font-family: "Jersey 10", sans-serif;
+     font-weight: 400;
+     font-style: normal;
+
+     animation: wiggle 0.5s infinite;
+
  }
 
- .grad-overlay {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 7;
-    background-image: linear-gradient(90deg, rgba(0, 0, 0, 0.788), transparent);
+ @keyframes wiggle {
+     0% {
+         background-position-y: center;
+     }
+
+     50% {
+         background-position-y: 49%;
+     }
+
+     100% {
+         background-position-y: center;
+     }
  }
 
 
@@ -43,25 +58,54 @@
      display: none !important;
  }
 
+ .screen h1 {
+     position: absolute;
+     top: 40px;
+     left: 60px;
+     margin: 0;
+     padding: 0;
+
+     font-size: 5rem;
+     letter-spacing: 5px;
+ }
+
+ .btn-group {
+     display: flex;
+     flex-direction: column;
+ }
+
  button {
+     font-size: 2rem;
+     font-family: "Jersey 10", sans-serif;
+     font-weight: 400;
+     font-style: normal;
+     text-align: left;
+
+     background: none;
      padding: 10px 20px;
-     margin: 10px;
-     font-size: 18px;
+     flex: 1;
      border: none;
      border-radius: 5px;
-     background: #555;
-     color: #fff;
+     outline: none;
+     color: #e0e0e0;
      cursor: pointer;
+
+     transition: transform 0.2s ease-in;
+ }
+
+ button:focus {
+     outline: 1px solid rgb(221, 221, 221);
  }
 
  button:hover {
-     background: #777;
+     transform: translateY(-3px);
+     color: #fff;
  }
 
  #gameContainer {
      position: relative;
      width: 100%;
-     height: 100%;  
+     height: 100%;
      display: grid;
      place-items: center;
  }
@@ -71,21 +115,93 @@
      background: #444;
  }
 
- /* Settings form styling */
+ /* Pause button styling */
+ .pause-button {
+     position: absolute;
+     top: 16px;
+     right: calc(50% - 40px);
+     width: 40px;
+     height: 40px;
+     border: none;
+     border-radius: 4px;
+     background: rgba(0, 0, 0, 0.5);
+     color: #fff;
+     font-size: 18px;
+     cursor: pointer;
+     z-index: 5;
+     
+
+     padding: 0;
+     display: grid;
+     place-items: center;
+     outline: none;
+     
+ }
+
+ .pause-button:hover {
+     background: rgba(0, 0, 0, 0.7);
+     transform: translateY(0);
+ }
+
+
+
+ #settingsScreen h2 {
+     letter-spacing: 10px;
+     font-size: 3rem;
+     padding: 0;
+     margin: 0 0 2rem 0;
+ }
+
  .settings-form {
      display: flex;
      flex-direction: column;
      align-items: flex-start;
+     margin-left: 2rem;
  }
 
  .settings-form label {
      margin: 8px 0 4px;
-     font-size: 16px;
+     font-size: 1.3rem;
+     letter-spacing: 5px;
  }
 
  .settings-form input[type="range"],
  .settings-form select {
      margin-bottom: 12px;
+ }
+
+ .settings-form select {
+     outline: none;
+     padding: 8px 12px;
+     background-color: #222;
+     color: #e0e0e0;
+     border-radius: 6px;
+     transition: border 0.2s ease;
+ }
+
+ .settings-form select:hover {
+     border: 1px solid #bdbdbd;
+ }
+
+ .settings-form select:focus {
+     outline: 1px solid #bdbdbd;
+ }
+
+ #settingsBackButton,
+ #instructionsBackButton {
+     margin-top: 2rem;
+     padding: 5px 20px;
+     flex: 0;
+ }
+
+ #instructionsScreen {
+     display: flex;
+     flex-direction: column;
+     justify-content: flex-start;
+ }
+
+ #instructionsScreen p {
+     margin: 0;
  }
 
  /* Mobile controls overlay */
@@ -95,8 +211,6 @@
      left: 0;
      width: 100%;
      height: 150px;
-
-     /* children receive events */
      z-index: 20;
  }
 
@@ -115,7 +229,7 @@
      user-select: none;
  }
 
- /* Example positions */
+
  #btnLeft {
      left: 20px;
      bottom: 20px;
