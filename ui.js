@@ -114,6 +114,7 @@ export default class UIManager {
             this.game.startGame();
 
             this._updateHUDVisibility();
+            this._updateMobileControlsVisibility();
         });
 
         // Main menu -> Settings
@@ -143,6 +144,7 @@ export default class UIManager {
         this.resumeButton.addEventListener('click', () => {
             this.hidePauseOverlay();
             this.game.resumeGame();
+            this._updateMobileControlsVisibility();
         });
         // Pause -> Settings
         this.pauseSettingsButton.addEventListener('click', () => {
@@ -276,6 +278,7 @@ export default class UIManager {
             this.menuScreen.classList.remove('hidden');
         }
 
+        
         this._updateHUDVisibility();
 
 
@@ -310,9 +313,11 @@ export default class UIManager {
 
     showPauseOverlay() {
         if (this.pauseOverlay) this.pauseOverlay.classList.remove('hidden');
+        this._updateMobileControlsVisibility();
     }
     hidePauseOverlay() {
         if (this.pauseOverlay) this.pauseOverlay.classList.add('hidden');
+        this._updateMobileControlsVisibility();
     }
 
     _saveSettings() {

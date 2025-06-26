@@ -37,12 +37,50 @@ import AudioManager from "./utils/audioManager.js";
   document.addEventListener('DOMContentLoaded', checkOrientation);
 })();
 
+
+// main.js (top of file)
+const canvas = document.getElementById('gameCanvas');
+const ctx    = canvas.getContext('2d');
+
+// Your game’s “logical” resolution:
+const BASE_WIDTH  = 800;
+const BASE_HEIGHT = 450;
+
+// Set the canvas’s internal resolution:
+canvas.width  = BASE_WIDTH;
+canvas.height = BASE_HEIGHT;
+
+/**
+ * Scale the canvas element (CSS size) so that the full 800×450
+ * always fits inside the viewport without scrollbars.
+ */
+function resizeCanvasToFit() {
+  const cw = window.innerWidth;
+  const ch = window.innerHeight;
+  const scale = Math.min(cw / BASE_WIDTH, ch / BASE_HEIGHT);
+
+  canvas.style.width  = `${BASE_WIDTH  * scale}px`;
+  canvas.style.height = `${BASE_HEIGHT * scale}px`;
+}
+
+// Hook it up:
+window.addEventListener('load',  resizeCanvasToFit);
+window.addEventListener('resize', resizeCanvasToFit);
+window.addEventListener('orientationchange', resizeCanvasToFit);
+
+// Also call once right away to cover the case that your script loads after 'load':
+resizeCanvasToFit();
+
+
 class Game {
   constructor() {
-    this.canvas = document.getElementById('gameCanvas');
-    this.ctx = this.canvas.getContext('2d');
+    this.canvas = canvas;
+    this.ctx = ctx;
     this.canvas.width = CONFIG.canvasWidth;
     this.canvas.height = CONFIG.canvasHeight;
+
+    resizeCanvasToFit();
+
 
     // Input and virtual inputs
     this.input = new InputHandler();
@@ -118,7 +156,7 @@ class Game {
     }
     // Reset or initialize game objects
     this._initGameObjects();
-    
+
 
 
     this._running = true;
@@ -130,7 +168,7 @@ class Game {
       this.audioManager.playMusic('bgm_fight', { volume: 0.5, loop: true });
     });
 
-    
+
 
 
     // Start the loop
