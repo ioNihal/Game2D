@@ -38,33 +38,30 @@ import AudioManager from "./utils/audioManager.js";
 })();
 
 
-// main.js (top of file)
-const canvas = document.getElementById('gameCanvas');
-const ctx    = canvas.getContext('2d');
 
-// Your game’s “logical” resolution:
-const BASE_WIDTH  = 800;
-const BASE_HEIGHT = 450;
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+
+const BASE_WIDTH = 800;
+const BASE_HEIGHT = 400;
 
 // Set the canvas’s internal resolution:
-canvas.width  = BASE_WIDTH;
+canvas.width = BASE_WIDTH;
 canvas.height = BASE_HEIGHT;
 
-/**
- * Scale the canvas element (CSS size) so that the full 800×450
- * always fits inside the viewport without scrollbars.
- */
+
 function resizeCanvasToFit() {
   const cw = window.innerWidth;
   const ch = window.innerHeight;
   const scale = Math.min(cw / BASE_WIDTH, ch / BASE_HEIGHT);
 
-  canvas.style.width  = `${BASE_WIDTH  * scale}px`;
+  canvas.style.width = `${BASE_WIDTH * scale}px`;
   canvas.style.height = `${BASE_HEIGHT * scale}px`;
 }
 
 // Hook it up:
-window.addEventListener('load',  resizeCanvasToFit);
+window.addEventListener('load', resizeCanvasToFit);
 window.addEventListener('resize', resizeCanvasToFit);
 window.addEventListener('orientationchange', resizeCanvasToFit);
 
@@ -388,9 +385,19 @@ class Game {
 
     // Handle restart if gameOver
     if (this.gameOver) {
-      if (this.input.isKeyJustPressed('KeyR')) {
-        this._resetRound();
-      }
+      // if (this.input.isKeyJustPressed('KeyR')) {
+      //   this._resetRound();
+      // }
+
+      this.stopGame();
+
+      this.audioManager.stopMusic();
+
+      
+      setTimeout(() => {
+        this.ui.showMainMenu();
+      }, 5000);
+
     }
 
     // Update input
@@ -491,15 +498,15 @@ class Game {
   }
 
   _drawGameOver() {
-    const text = this.winner === 'player' ? 'You Win!' : 'Game Over';
-    this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    const text = this.winner === 'player' ? 'You Win!' : 'Game Over,Enemy Killed You';
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
     this.ctx.fillRect(0, 0, CONFIG.canvasWidth, CONFIG.canvasHeight);
     this.ctx.fillStyle = 'white';
     this.ctx.textAlign = 'center';
     this.ctx.font = '48px sans-serif';
     this.ctx.fillText(text, CONFIG.canvasWidth / 2, CONFIG.canvasHeight / 2);
     this.ctx.font = '24px sans-serif';
-    this.ctx.fillText('Press R to Restart', CONFIG.canvasWidth / 2, CONFIG.canvasHeight / 2 + 40);
+    this.ctx.fillText('Please wait 5seconds...', CONFIG.canvasWidth / 2, CONFIG.canvasHeight / 2 + 40);
     this.ctx.textAlign = 'start';
   }
 
