@@ -94,7 +94,8 @@
  }
 
  button:focus {
-     outline: 1px solid rgb(221, 221, 221);
+     transform: translateY(-3px);
+     color: #fff;
  }
 
  button:hover {
@@ -143,7 +144,7 @@
      
  }
 
- .pause-button:hover {
+ .pause-button:hover, .pause-button:active {
      background: rgba(0, 0, 0, 0.7);
      transform: translateY(0);
  }

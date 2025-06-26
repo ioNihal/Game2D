@@ -68,6 +68,13 @@ window.addEventListener('orientationchange', resizeCanvasToFit);
 // Also call once right away to cover the case that your script loads after 'load':
 resizeCanvasToFit();
 
+ctx.fillStyle = '#fff';
+ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
+ctx.fillStyle = '#000';
+ctx.textAlign = 'center';
+ctx.font = '20px sans-serif';
+ctx.fillText('Loading assets…', BASE_WIDTH / 2, BASE_HEIGHT / 2);
+
 
 class Game {
   constructor() {
@@ -123,6 +130,9 @@ class Game {
   _preloadAssets() {
     // Build image lists
     const buildImageListForCharacter = (charKey) => {
+
+
+
       const list = [];
       const anims = ANIMATION_CONFIG[charKey];
       for (const [animKey, cfg] of Object.entries(anims)) {
@@ -141,7 +151,7 @@ class Game {
     // Start loading
     this.assetLoader.loadImages(allImageList)
       .then(() => {
-        // console.log('Images Loaded');
+        this.ctx.clearRect(0, 0, CONFIG.width, CONFIG.height);
       })
       .catch(err => console.error("Asset load error:", err));
   }
@@ -393,7 +403,7 @@ class Game {
 
       this.audioManager.stopMusic();
 
-      
+
       setTimeout(() => {
         this.ui.showMainMenu();
       }, 5000);
