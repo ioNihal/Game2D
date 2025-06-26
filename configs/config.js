@@ -1,9 +1,9 @@
 const canvas = document.getElementById('gameCanvas');
 
 export const CONFIG = {
-    canvasWidth: canvas.clientWidth,
-    canvasHeight: canvas.clientHeight,
-    groundY: 400,
+    canvasWidth: 800,
+    canvasHeight: 450,
+    groundY: 300,
     gravity: 0.7,
     walkSpeed: 3.5,
     jumpVelocity: -12,
