@@ -39,6 +39,8 @@
 
  }
 
+
+
  @keyframes wiggle {
      0% {
          background-position-y: center;
@@ -58,7 +60,8 @@
      display: none !important;
  }
 
- .screen h1 {
+ .screen h1,
+ #pauseOverlay h2 {
      position: absolute;
      top: 40px;
      left: 60px;
@@ -68,6 +71,8 @@
      font-size: 5rem;
      letter-spacing: 5px;
  }
+
+
 
  .btn-group {
      display: flex;
@@ -106,7 +111,7 @@
  #gameContainer {
      position: relative;
      width: 100%;
-     height: 100dvh;
+     height: 100vh;
      display: grid;
      place-items: center;
  }
@@ -119,7 +124,7 @@
 
      image-rendering: pixelated;
  }
- 
+
 
  /* Pause button styling */
  .pause-button {
@@ -135,16 +140,17 @@
      font-size: 18px;
      cursor: pointer;
      z-index: 5;
-     
+
 
      padding: 0;
      display: grid;
      place-items: center;
      outline: none;
-     
+
  }
 
- .pause-button:hover, .pause-button:active {
+ .pause-button:hover,
+ .pause-button:active {
      background: rgba(0, 0, 0, 0.7);
      transform: translateY(0);
  }
@@ -156,6 +162,12 @@
      font-size: 3rem;
      padding: 0;
      margin: 0 0 2rem 0;
+ }
+
+ #settingsScreen {
+     background-image:
+         linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0.5)),
+         url('./assets/splash.png');
  }
 
  .settings-form {
@@ -204,11 +216,21 @@
      display: flex;
      flex-direction: column;
      justify-content: flex-start;
+     background-image:
+         linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0.5)),
+         url('./assets/splash.png');
  }
 
  #instructionsScreen p {
      margin: 0;
+     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif
  }
+
+ #instructionsScreen h2 {
+     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+ }
+
+
 
  /* Mobile controls overlay */
  #mobileControls {
@@ -237,8 +259,10 @@
      transition: transform 0.2s ease;
  }
 
- .touch-button:active , .touch-button:active, .touch-button:focus{
-    background-color: #222;
+ .touch-button:active,
+ .touch-button:active,
+ .touch-button:focus {
+     background-color: #222;
  }
 
 
@@ -259,12 +283,12 @@
 
  #btnAttack {
      right: 20px;
-     bottom: 100px;
+     bottom: 20px;
  }
 
  #btnBlock {
      right: 20px;
-     bottom: 20px;
+     bottom: 100px;
  }
 
  #rotateOverlay {
@@ -282,4 +306,60 @@
      padding: 20px;
      z-index: 9999;
      flex-direction: column;
+ }
+
+ @media screen and (orientation: landscape) and (max-height: 500px) {
+     .screen {
+         padding: 2rem;
+         justify-content: flex-end;
+     }
+
+     .screen h1 {
+         font-size: 2.5rem;
+         top: 2rem;
+         left: 3rem;
+     }
+
+     .btn-group button {
+         font-size: 1.2rem;
+         padding: 8px 16px;
+     }
+
+     #settingsScreen h2 {
+         font-size: 1.5rem;
+         letter-spacing: 5px;
+     }
+
+     .settings-form {
+         margin-left: 1rem;
+         max-height: 70vh;
+         overflow-y: auto;
+         /* allow scrolling inside the form */
+     }
+
+     .settings-form label {
+         font-size: 1rem;
+         letter-spacing: 3px;
+     }
+ }
+
+ /* 3) Make sure any long text block scrolls instead of squishing */
+ .instructions-screen,
+ #instructionsScreen {
+     overflow-y: auto;
+ }
+
+ /* 4) Reduce the splash wiggle amplitude on short screens */
+ @media screen and (max-height: 500px) {
+     @keyframes wiggle {
+
+         0%,
+         100% {
+             background-position-y: center;
+         }
+
+         50% {
+             background-position-y: 49.5%;
+         }
+     }
  }
