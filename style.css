@@ -105,7 +105,7 @@
  #gameContainer {
      position: relative;
      width: 100%;
-     height: calc(100svh - 20px);
+     height: 100dvh;
      display: grid;
      place-items: center;
  }
@@ -113,6 +113,8 @@
  #gameCanvas {
      display: block;
      background: #444;
+     height: 100%;
+     width: 100%;
  }
 
  /* Pause button styling */
