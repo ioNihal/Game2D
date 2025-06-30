@@ -126,7 +126,7 @@
  }
 
 
- /* Pause button styling */
+ 
  .pause-button {
      position: absolute;
      top: 16px;
@@ -245,8 +245,8 @@
 
  .touch-button {
      position: absolute;
-     width: 60px;
-     height: 60px;
+     width: 80px;
+     height: 80px;
      background: rgba(255, 255, 255, 0.3);
      border-radius: 50%;
      touch-action: none;
@@ -272,12 +272,12 @@
  }
 
  #btnRight {
-     left: 100px;
+     left: 130px;
      bottom: 20px;
  }
 
  #btnJump {
-     right: 100px;
+     right: 130px;
      bottom: 20px;
  }
 
@@ -288,7 +288,7 @@
 
  #btnBlock {
      right: 20px;
-     bottom: 100px;
+     bottom: 130px;
  }
 
  #rotateOverlay {
@@ -334,7 +334,7 @@
          margin-left: 1rem;
          max-height: 70vh;
          overflow-y: auto;
-         /* allow scrolling inside the form */
+
      }
 
      .settings-form label {
@@ -343,13 +343,13 @@
      }
  }
 
- /* 3) Make sure any long text block scrolls instead of squishing */
+ 
  .instructions-screen,
  #instructionsScreen {
      overflow-y: auto;
  }
 
- /* 4) Reduce the splash wiggle amplitude on short screens */
+ 
  @media screen and (max-height: 500px) {
      @keyframes wiggle {
 
