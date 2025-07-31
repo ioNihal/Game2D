@@ -1,9 +1,9 @@
 # 🥋 Stickman Fighter
 
-[![GitHub Stars](https://img.shields.io/github/stars/your-username/your-repo?style=social)](https://github.com/your-username/your-repo/stargazers)
-[![GitHub Forks](https://img.shields.io/github/forks/your-username/your-repo?style=social)](https://github.com/your-username/your-repo/network/members)
-[![GitHub Issues](https://img.shields.io/github/issues/your-username/your-repo)](https://github.com/your-username/your-repo/issues)
-[![MIT License](https://img.shields.io/github/license/your-username/your-repo)](LICENSE)
+[![GitHub Stars](https://img.shields.io/github/stars/ioNihal/Game2D?style=social)](https://github.com/ioNihal/Game2D/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/ioNihal/Game2D?style=social)](https://github.com/ioNihal/Game2D/network/members)
+[![GitHub Issues](https://img.shields.io/github/issues/ioNihal/Game2D)](https://github.com/ioNihal/Game2D/issues)
+[![MIT License](https://img.shields.io/github/license/ioNihal/Game2D)](LICENSE)
 
 A fast-paced, endless 1v1 stickman fighting game for web browsers. Responsive controls, simple AI, and mobile support. Built with vanilla JS, HTML5 Canvas, and CSS.
 
