@@ -1,4 +1,4 @@
-const canvas = document.getElementById('gameCanvas');
+
 
 export const CONFIG = {
     canvasWidth: 800,

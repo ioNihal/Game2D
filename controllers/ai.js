@@ -18,6 +18,10 @@ export default class AIController {
         const f = this.fighter;
         const p = this.opponent;
 
+        if (f.state === 'ko') {
+            return;
+        }
+
         if (f.state === 'hitstun' && f.stunTimer > 0) {
             return;
         }
@@ -40,7 +44,7 @@ export default class AIController {
 
         //approach if too far
         if (absDx > this.preferredRange) {
-            
+
             if (dx > 0) {
                 f.facingRight = true;
                 f.vx = CONFIG.walkSpeed;
@@ -55,6 +59,9 @@ export default class AIController {
         //if in range and attack cooldown , perform attack
         if (absDx <= this.preferredRange && f.attackCooldown === 0) {
             const viable = f.attacks.filter(atk => {
+                if (!atk) return false;
+                if (atk.name === 'killswitch') return false;      
+                if (atk?.allowAI === false) return false;      
                 return true;
             });
             if (viable.length > 0) {

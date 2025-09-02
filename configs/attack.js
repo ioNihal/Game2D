@@ -32,5 +32,22 @@ export const ATTACKS = [
     height: 20,
     cooldownExtra: 5,
   },
+  {
+    name: 'killswitch',
+    startup: 6,
+    active: 5,
+    recovery: 20,
+    hitFrame: 2,
+    damage: 100,
+    knockbackX: 12,
+    knockbackY: -8,
+    animKey: 'lightPunch',
+    offsetX: 135,
+    offsetY: 160,
+    width: 320,
+    height: 100,
+    cooldownExtra: 10,
+    allowAI: false,
+  },
   // more attack please....
 ];

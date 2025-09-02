@@ -358,12 +358,21 @@ class Game {
     this.winner = null;
   }
 
-  _gameLoop(timestamp) {
+    _gameLoop(timestamp) {
     if (!this._running) return; // stop the loop if game is stopped
     if (this._paused) {
       this._draw();
       this._rafId = requestAnimationFrame(this._gameLoop);
       return;
+    }
+
+    // compute delta seconds for smooth countdown
+    let dt = 0;
+    if (!this._lastTimestamp) {
+      this._lastTimestamp = timestamp;
+    } else {
+      dt = (timestamp - this._lastTimestamp) / 1000;
+      this._lastTimestamp = timestamp;
     }
 
     // Update fighters and hitboxes
@@ -393,21 +402,25 @@ class Game {
       this._checkGameOver();
     }
 
-    // Handle restart if gameOver
+    // Handle restart/countdown if gameOver
     if (this.gameOver) {
-      // if (this.input.isKeyJustPressed('KeyR')) {
-      //   this._resetRound();
-      // }
+      // initialize countdown once when gameOver first seen
+      if (this._endCountdown === undefined) {
+        this._endCountdown = 10.0; // seconds
+        // stop music immediately (we keep the loop running so countdown is visible)
+        this.audioManager.stopMusic();
+      }
 
-      this.stopGame();
+      // decrement countdown
+      this._endCountdown -= dt;
 
-      this.audioManager.stopMusic();
-
-
-      setTimeout(() => {
+      // if countdown finished, stop and go back to menu
+      if (this._endCountdown <= 0) {
+        this.stopGame();
+        this._endCountdown = undefined;
         this.ui.showMainMenu();
-      }, 5000);
-
+        return; // stop further frame processing this tick
+      }
     }
 
     // Update input
@@ -416,6 +429,7 @@ class Game {
     // Loop
     this._rafId = requestAnimationFrame(this._gameLoop);
   }
+
 
   _updateHitboxes() {
     for (let i = this.hitboxes.length - 1; i >= 0; i--) {
@@ -448,9 +462,9 @@ class Game {
     this.enemy.draw(this.ctx);
 
     // // Draw hitboxes debug if desired
-    // for (const hb of this.hitboxes) {
-    //   hb.drawDebug(this.ctx);
-    // }
+    for (const hb of this.hitboxes) {
+      hb.drawDebug(this.ctx);
+    }
 
     // Draw UI: health bars etc.
     this._drawUI();
@@ -515,10 +529,15 @@ class Game {
     this.ctx.textAlign = 'center';
     this.ctx.font = '48px sans-serif';
     this.ctx.fillText(text, CONFIG.canvasWidth / 2, CONFIG.canvasHeight / 2);
+
+    
+    const remaining = Math.max(0, Math.ceil(this._endCountdown ?? 5));
     this.ctx.font = '24px sans-serif';
-    this.ctx.fillText('Please wait 5seconds...', CONFIG.canvasWidth / 2, CONFIG.canvasHeight / 2 + 40);
+    this.ctx.fillText(`Please wait ${remaining} second${remaining !== 1 ? 's' : ''}...`, CONFIG.canvasWidth / 2, CONFIG.canvasHeight / 2 + 40);
+
     this.ctx.textAlign = 'start';
   }
+
 
   _checkGameOver() {
     if (this.player.state === 'ko') {

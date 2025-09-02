@@ -106,6 +106,10 @@ export default class Fighter {
             case 'idle':
                 this.vx = 0;
                 if (input) {
+                    if (input.isKeyJustPressed('KeyL') && this.attackCooldown === 0) {
+                        this.startAttack('killswitch');
+                        return;
+                    }
                     if ((input.isKeyDown('KeyK')) && this.onGround) {
                         this.enterState('block');
                         return;
@@ -253,6 +257,7 @@ export default class Fighter {
 
 
             switch (newState) {
+
                 case 'block':
                     this.blockHitTimer = 0;
                     break;
