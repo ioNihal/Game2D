@@ -3,6 +3,9 @@
 
 <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description"
+        content="Stickman Fighter — a fast-paced, endless 1v1 stickman brawler with smart AI. Play on desktop or mobile." />
     <title>Stickman Fighter</title>
     <link rel="stylesheet" href="./style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,125 +14,149 @@
 </head>
 
 <body>
+    <!-- Landscape-only guard -->
     <div id="rotateOverlay">
-        <div style="font-size: 1.5em; margin-bottom: 20px;">
-            Please rotate your device<br>to landscape orientation
-        </div>
-        <div style="font-size: 1em;">
-            This game / site is only available in landscape mode.
-        </div>
+        <div style="font-size: 1.5em; margin-bottom: 16px;">Rotate your device</div>
+        <div style="font-size: 0.9em; opacity: 0.7;">This game requires landscape orientation.</div>
     </div>
+
     <div id="gameContainer">
         <canvas id="gameCanvas"></canvas>
-        <button id="pauseButton" class="pause-button">❚❚</button>
 
-        <!-- Home screen -->
+        <!-- In-game pause button -->
+        <button id="pauseButton" class="pause-button hidden" aria-label="Pause">❚❚</button>
+
+        <!--  Main Menu  -->
         <div id="menuScreen" class="screen">
             <h1>StickMan Fighter</h1>
-            <div class="btn-group">
+            <nav class="btn-group" aria-label="Main menu">
                 <button id="startButton">Start Game</button>
                 <button id="settingsButton">Settings</button>
                 <button id="instructionsButton">About</button>
-            </div>
+            </nav>
         </div>
 
-        <!-- Settings Screen -->
+        <!--  Settings  -->
         <div id="settingsScreen" class="screen hidden">
             <h2>Settings</h2>
-            <form id="settingsForm" class="settings-form">
+            <form id="settingsForm" class="settings-form" onsubmit="return false;">
 
-                <label for="masterVolumeRange">Master Volume:</label>
+                <label for="masterVolumeRange">Master Volume</label>
                 <input type="range" id="masterVolumeRange" min="0" max="1" step="0.01">
 
-
-                <label for="musicVolumeRange">Music Volume:</label>
+                <label for="musicVolumeRange">Music Volume</label>
                 <input type="range" id="musicVolumeRange" min="0" max="1" step="0.01">
 
-
-                <label for="sfxVolumeRange">SFX Volume:</label>
+                <label for="sfxVolumeRange">SFX Volume</label>
                 <input type="range" id="sfxVolumeRange" min="0" max="1" step="0.01">
 
-
-                <label for="muteToggle">
+                <label class="checkbox-label" for="muteToggle">
                     <input type="checkbox" id="muteToggle">
                     Mute All Audio
                 </label>
-                <label for="touchToggle">Enable Mobile Controls:</label>
+
+                <label for="touchToggle">Mobile Controls</label>
                 <select id="touchToggle">
                     <option value="auto">Auto-detect</option>
-                    <option value="on">On</option>
-                    <option value="off">Off</option>
+                    <option value="on">Always On</option>
+                    <option value="off">Always Off</option>
                 </select>
 
-                <label for="difficultySelect">Difficulty:</label>
+                <label for="difficultySelect">Difficulty</label>
                 <select id="difficultySelect">
                     <option value="easy">Easy</option>
-                    <option value="normal">Normal</option>
+                    <option value="normal" selected>Normal</option>
                     <option value="hard">Hard</option>
                 </select>
             </form>
             <button id="settingsBackButton">Back</button>
         </div>
 
-        <!-- Instruction Screen -->
+        <!--  Instructions / About  -->
         <div id="instructionsScreen" class="screen hidden">
             <h2>About</h2>
             <p>
-                Welcome to Stickman Fighter! This is a fast-paced, endless 1v1 replayable fight game.
-                Each round pits you against an opponent in a one-on-one duel: there are no levels or stages just you vs.
-                another combatant in an endless series of matches.
-                Hone your timing, master your moves, and see how many victories you can string together before defeat.
-                Every fight is a fresh challenge!
+                Stickman Fighter is a fast-paced 1v1 brawler. Beat your opponent across
+                multiple rounds, first to <strong>2 round wins</strong> takes the match.
+                The AI will adapt: it defends, punishes whiffed attacks, and combos you.
             </p>
 
-            <h2>How to Play</h2>
-            <p>Use arrow keys or A/D to move left and right.</p>
-            <p>Press W or Up arrow to jump.</p>
-            <p>Press J to perform an attack.</p>
-            <p>Press K to block incoming hits.</p>
-            <p>On mobile devices, use the on-screen buttons for movement, jump, attack, and block.</p>
+            <h2>Controls</h2>
+            <table class="controls-table">
+                <tr>
+                    <th>Action</th>
+                    <th>Key</th>
+                </tr>
+                <tr>
+                    <td>Move Left</td>
+                    <td>← / A</td>
+                </tr>
+                <tr>
+                    <td>Move Right</td>
+                    <td>→ / D</td>
+                </tr>
+                <tr>
+                    <td>Jump</td>
+                    <td>↑ / W</td>
+                </tr>
+                <tr>
+                    <td>Light Punch</td>
+                    <td>J</td>
+                </tr>
+                <tr>
+                    <td>Heavy Punch</td>
+                    <td>U</td>
+                </tr>
+                <tr>
+                    <td>Sweep Kick</td>
+                    <td>I</td>
+                </tr>
+                <tr>
+                    <td>Block</td>
+                    <td>K (hold)</td>
+                </tr>
+                <tr>
+                    <td>Pause</td>
+                    <td>Esc</td>
+                </tr>
+            </table>
 
+            <h2>Tips</h2>
+            <p>• Block reduces incoming damage by 85%.</p>
+            <p>• Heavy Punch deals the most damage, save it for when the enemy whiffs.</p>
+            <p>• Sweep Kick hits low, good for mix-ups.</p>
+            <p>• The AI will punish your recovery frames on hard difficulty.</p>
 
-            <h2>Game Features</h2>
-            <p>
-                • Simple stickman art style with responsive controls.<br>
-                • Endless replay: each victory immediately leads into the next match.<br>
-                • AI opponent with increasing difficulty (adjustable in settings).<br>
-                • Mobile-friendly on-screen controls and desktop keyboard support.<br>
-                • Sound effects and background music enhance immersion.
-            </p>
-
-            <h2>About the Developer</h2>
-            <p>
-                Hi, I’m the solo developer behind Stickman Fighter. I built this as a learning project and passion piece
-                to explore 2D canvas-based gameplay, responsive input handling, and simple AI.
-                My goal was to create a fun, replayable one-on-one fighting experience you can pick up quickly and play
-                anywhere on desktop or mobile.
-            </p>
-            <p>
-                I hope you enjoy the game! Feedback and suggestions are welcome feel free to reach out or check any
-                project repository or contact info you maintain.
-            </p>
             <button id="instructionsBackButton">Back</button>
         </div>
 
-        <!-- Pause overlay -->
+        <!--  Pause Overlay  -->
         <div id="pauseOverlay" class="screen hidden">
             <h2>Paused</h2>
-            <div class="btn-group">
+            <nav class="btn-group" aria-label="Pause menu">
                 <button id="resumeButton">Resume</button>
                 <button id="pauseSettingsButton">Settings</button>
                 <button id="quitButton">Quit to Menu</button>
-            </div>
+            </nav>
         </div>
 
-        <!-- Mobile Controll Overlay -->
-        <div id="mobileControls" class="hidden">
-            <div id="btnLeft" class="touch-button">◀</div>
-            <div id="btnRight" class="touch-button">▶</div>
-            <div id="btnJump" class="touch-button">▲</div>
-            <div id="btnAttack" class="touch-button">K</div>
-            <div id="btnBlock" class="touch-button">J</div>
+        <!--  Game Over Overlay  -->
+        <div id="gameOverOverlay" class="screen hidden game-over-screen">
+            <nav class="btn-group" aria-label="Game over options">
+                <button id="rematchButton">Rematch</button>
+                <button id="quitToMenuButton">Quit to Menu</button>
+            </nav>
+        </div>
+
+        <!--  Mobile Controls  -->
+        <div id="mobileControls" class="hidden" aria-label="Mobile controls">
+            <button id="btnLeft" class="touch-button touch-left" aria-label="Move left">◀</button>
+            <button id="btnRight" class="touch-button touch-right" aria-label="Move right">▶</button>
+            <button id="btnJump" class="touch-button touch-jump" aria-label="Jump">▲</button>
+            <button id="btnAttack" class="touch-button touch-attack" aria-label="Light Punch">J</button>
+            <button id="btnHeavy" class="touch-button touch-heavy" aria-label="Heavy Punch">U</button>
+            <button id="btnSweep" class="touch-button touch-sweep" aria-label="Sweep Kick">I</button>
+            <button id="btnBlock" class="touch-button touch-block" aria-label="Block">K</button>
         </div>
     </div>
 

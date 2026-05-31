@@ -1,447 +1,355 @@
+/**
+ * UIManager — manages all HTML overlay screens, settings persistence,
+ * mobile controls, and button sound effects.
+ *
+ * Works in concert with Game (passed as a reference) but does NOT
+ * reach into game internals beyond the documented public API:
+ *   game.startGame()   game.stopGame()    game.rematch()
+ *   game.pauseGame()   game.resumeGame()  game.isRunning()   game.isPaused()
+ *   game.setMasterVolume() / setMusicVolume() / setSFXVolume()
+ *   game.setDifficulty()
+ *   game.onVirtualButtonDown() / onVirtualButtonUp()
+ */
 export default class UIManager {
     constructor(game) {
-        this.game = game;
+        this._game = game;
 
-        // Screen elements
-        this.menuScreen = document.getElementById('menuScreen');
-        this.settingsScreen = document.getElementById('settingsScreen');
-        this.instructionsScreen = document.getElementById('instructionsScreen');
-        this.pauseOverlay = document.getElementById('pauseOverlay');
-        this.mobileControls = document.getElementById('mobileControls');
-        this.gameContainer = document.getElementById('gameContainer');
+        //  Screen elements 
+        this._menuScreen = document.getElementById('menuScreen');
+        this._settingsScreen = document.getElementById('settingsScreen');
+        this._instructionsScreen = document.getElementById('instructionsScreen');
+        this._pauseOverlay = document.getElementById('pauseOverlay');
+        this._gameOverOverlay = document.getElementById('gameOverOverlay');
+        this._mobileControls = document.getElementById('mobileControls');
+        this._pauseButton = document.getElementById('pauseButton');
 
-        // Buttons
-        this.startButton = document.getElementById('startButton');
-        this.settingsButton = document.getElementById('settingsButton');
-        this.instructionsButton = document.getElementById('instructionsButton');
-        this.settingsBackButton = document.getElementById('settingsBackButton');
-        this.instructionsBackButton = document.getElementById('instructionsBackButton');
-        this.resumeButton = document.getElementById('resumeButton');
-        this.pauseSettingsButton = document.getElementById('pauseSettingsButton');
-        this.quitButton = document.getElementById('quitButton');
+        //  Menu buttons 
+        this._startButton = document.getElementById('startButton');
+        this._settingsButton = document.getElementById('settingsButton');
+        this._instructionsButton = document.getElementById('instructionsButton');
 
-        this.pauseButton = document.getElementById('pauseButton');
+        //  Settings 
+        this._settingsBackButton = document.getElementById('settingsBackButton');
+        this._masterVolumeRange = document.getElementById('masterVolumeRange');
+        this._musicVolumeRange = document.getElementById('musicVolumeRange');
+        this._sfxVolumeRange = document.getElementById('sfxVolumeRange');
+        this._muteToggle = document.getElementById('muteToggle');
+        this._touchToggle = document.getElementById('touchToggle');
+        this._difficultySelect = document.getElementById('difficultySelect');
 
-        this.buttons = [
-            this.settingsButton, this.startButton, this.instructionsBackButton, this.instructionsButton,
-            this.settingsBackButton, this.resumeButton, this.pauseSettingsButton, this.quitButton
-        ]
+        //  Instructions 
+        this._instructionsBackButton = document.getElementById('instructionsBackButton');
 
-        // Settings form elements
-        this.masterVolumeRange = document.getElementById('masterVolumeRange');
-        this.musicVolumeRange = document.getElementById('musicVolumeRange');
-        this.sfxVolumeRange = document.getElementById('sfxVolumeRange');
-        this.muteToggle = document.getElementById('muteToggle');
-        this.touchToggle = document.getElementById('touchToggle');
-        this.difficultySelect = document.getElementById('difficultySelect');
+        //  Pause overlay 
+        this._resumeButton = document.getElementById('resumeButton');
+        this._pauseSettingsButton = document.getElementById('pauseSettingsButton');
+        this._quitButton = document.getElementById('quitButton');
 
-        // Mobile buttons
-        this.btnLeft = document.getElementById('btnLeft');
-        this.btnRight = document.getElementById('btnRight');
-        this.btnJump = document.getElementById('btnJump');
-        this.btnAttack = document.getElementById('btnAttack');
-        this.btnBlock = document.getElementById('btnBlock');
+        //  Game-over overlay 
+        this._rematchButton = document.getElementById('rematchButton');
+        this._quitToMenuButton = document.getElementById('quitToMenuButton');
 
-        this.audio = new Audio('./assets/hover.mp3');
+        //  Mobile touch buttons 
+        this._btnLeft = document.getElementById('btnLeft');
+        this._btnRight = document.getElementById('btnRight');
+        this._btnJump = document.getElementById('btnJump');
+        this._btnAttack = document.getElementById('btnAttack');
+        this._btnHeavy = document.getElementById('btnHeavy');
+        this._btnSweep = document.getElementById('btnSweep');
+        this._btnBlock = document.getElementById('btnBlock');
 
-        // to know from where settings opened!
+        //  SFX / BGM (outside AudioManager — for menu screens) 
+        this._hoverSfx = new Audio('./assets/hover.mp3');
+        this._splashBgm = new Audio('./assets/main.mp3');
+        this._splashBgm.loop = true;
+
+        // Track first user gesture (required for audio autoplay)
+        this._userInteracted = false;
+
+        // Track which screen opened Settings (so Back returns correctly)
         this._settingsParent = null;
 
-        this._bindEvents();
-
-        // Load settings from localStorage
         this._loadSettings();
-
-        // Detect mobile and show controls if enabled
+        this._bindEvents();
         this._updateMobileControlsVisibility();
 
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            this._updateMobileControlsVisibility();
-        });
-
-        //i added splashbgm at final so i am lazy and made constroll here wihtout context
-        this.splashBgm = new Audio('./assets/main.mp3');
-        if (this.splashBgm) this.splashBgm.loop = true;
-        this.masterVolumeRange.addEventListener('change', () => {
-            this.splashBgm.volume = this.masterVolumeRange.value;
-        })
-        this.muteToggle.addEventListener('change', () => {
-            this.splashBgm.muted = this.muteToggle.checked;
-        });
-
-
-        this.userClicked = false;
-
-        this.startButton.addEventListener('click', () => {
-            if (!this.userClicked) this.startWithoutMusic = true;
-            if (this.splashBgm.played) this.splashBgm.pause();
-            this.splashBgm.pause();
-        });
-
-
-
-        document.addEventListener('click', () => {
-            if (this.userClicked) return;
-            if (!this.menuScreen.classList.contains('hidden')) {
-                this.splashBgm.play()
-                    .then(() => { })
-                    .catch(error => console.error('Error playing audio:', error));
-            }
-            this.userClicked = true;
-        })
+        window.addEventListener('resize', () => this._updateMobileControlsVisibility());
     }
 
+    //  Public API 
+
+    /** Returns the currently selected difficulty string. */
+    getDifficulty() {
+        return this._difficultySelect?.value ?? 'normal';
+    }
+
+    showMainMenu() {
+        this._hideAllScreens();
+        this._show(this._menuScreen);
+        this._updateHUDVisibility();
+        this._updateMobileControlsVisibility();
+        this._game.stopMusic();   // stop fight BGM when returning to menu
+        this._splashBgm.currentTime = 0;
+        this._splashBgm.play().catch(() => { });
+    }
+
+    showGameOverOverlay() {
+        this._show(this._gameOverOverlay);
+        this._updateHUDVisibility();
+        this._updateMobileControlsVisibility();
+    }
+
+    hideGameOverOverlay() {
+        this._hide(this._gameOverOverlay);
+    }
+
+    //  Settings helpers 
+
+    _showSettings(parent) {
+        this._settingsParent = parent;
+        if (parent === 'pause' && this._game.isRunning() && !this._game.isPaused()) {
+            this._game.pauseGame();
+        }
+        this._hideAllScreens();
+        this._show(this._settingsScreen);
+    }
+
+    _onSettingsBack() {
+        this._hide(this._settingsScreen);
+        if (this._settingsParent === 'menu') this._show(this._menuScreen);
+        if (this._settingsParent === 'pause') this._show(this._pauseOverlay);
+        this._settingsParent = null;
+    }
+
+    //  Event binding 
+
     _bindEvents() {
+        // First-gesture listener for audio
+        document.addEventListener('click', () => {
+            if (this._userInteracted) return;
+            this._userInteracted = true;
+            if (!this._menuScreen?.classList.contains('hidden')) {
+                this._splashBgm.play().catch(() => { });
+            }
+        }, { once: false });
 
-        this.buttons.forEach(btn => {
+        // Hover sound on all buttons
+        document.querySelectorAll('button').forEach(btn => {
             btn.addEventListener('mouseenter', () => {
-                if (this.userClicked) {
-                    this.audio.play()
-                        .then(() => { })
-                        .catch(error => console.error('Error playing audio:', error));
-                }
-            })
-        })
+                if (!this._userInteracted) return;
+                this._hoverSfx.currentTime = 0;
+                this._hoverSfx.play().catch(() => { });
+            });
+        });
 
-
-        this.startButton.addEventListener('click', () => {
-            this.hideAllScreens();
-
-            this.splashBgm.pause();
-            this.splashBgm.currentTime = 0;
-
-            this.game.startGame();
-
+        //  Main menu 
+        this._startButton?.addEventListener('click', () => {
+            this._splashBgm.pause();
+            this._splashBgm.currentTime = 0;
+            this._hideAllScreens();
+            this._game.startGame();
             this._updateHUDVisibility();
             this._updateMobileControlsVisibility();
         });
 
-        // Main menu -> Settings
-        this.settingsButton.addEventListener('click', () => {
-            if (!this.game.isRunning()) {
+        this._settingsButton?.addEventListener('click', () => {
+            if (!this._game.isRunning()) this._showSettings('menu');
+        });
 
-                this.showSettings('menu');
+        this._instructionsButton?.addEventListener('click', () => {
+            if (!this._game.isRunning()) {
+                this._hideAllScreens();
+                this._show(this._instructionsScreen);
             }
         });
-        this.instructionsButton.addEventListener('click', () => {
-            if (!this.game.isRunning()) {
-                this.showInstructions('menu');
+
+        //  Settings 
+        this._settingsBackButton?.addEventListener('click', () => this._onSettingsBack());
+
+        this._masterVolumeRange?.addEventListener('input', () => { this._applyVolumes(); this._saveSettings(); });
+        this._musicVolumeRange?.addEventListener('input', () => { this._applyVolumes(); this._saveSettings(); });
+        this._sfxVolumeRange?.addEventListener('input', () => { this._applyVolumes(); this._saveSettings(); });
+        this._muteToggle?.addEventListener('change', () => { this._applyVolumes(); this._saveSettings(); });
+        this._touchToggle?.addEventListener('change', () => { this._saveSettings(); this._updateMobileControlsVisibility(); });
+        this._difficultySelect?.addEventListener('change', () => {
+            this._game.setDifficulty(this._difficultySelect.value);
+            this._saveSettings();
+        });
+
+        // Splash BGM volume follows master
+        this._masterVolumeRange?.addEventListener('input', () => {
+            this._splashBgm.volume = parseFloat(this._masterVolumeRange.value);
+        });
+        this._muteToggle?.addEventListener('change', () => {
+            this._splashBgm.muted = this._muteToggle.checked;
+        });
+
+        //  Instructions 
+        this._instructionsBackButton?.addEventListener('click', () => {
+            this._hideAllScreens();
+            this._show(this._menuScreen);
+        });
+
+        //  Pause overlay 
+        this._pauseButton?.addEventListener('click', () => {
+            if (this._game.isRunning() && !this._game.isPaused()) {
+                this._show(this._pauseOverlay);
+                this._game.pauseGame();
+                this._updateMobileControlsVisibility();
             }
         });
 
-        // Settings Back button
-        this.settingsBackButton.addEventListener('click', () => {
-            this.onSettingsBack();
-        });
-
-        // Instructions Back
-        this.instructionsBackButton.addEventListener('click', () => {
-            this.onInstructionsBack();
-        });
-
-        // PauseOverlay buttons
-        this.resumeButton.addEventListener('click', () => {
-            this.hidePauseOverlay();
-            this.game.resumeGame();
+        this._resumeButton?.addEventListener('click', () => {
+            this._hide(this._pauseOverlay);
+            this._game.resumeGame();
             this._updateMobileControlsVisibility();
         });
-        // Pause -> Settings
-        this.pauseSettingsButton.addEventListener('click', () => {
-            // From pause overlay
-            if (this.game.isRunning() && this.game.isPaused()) {
-                this.showSettings('pause');
+
+        this._pauseSettingsButton?.addEventListener('click', () => {
+            if (this._game.isRunning() && this._game.isPaused()) {
+                this._showSettings('pause');
             }
         });
-        this.quitButton.addEventListener('click', () => {
-            // Quit to menu
-            this.hidePauseOverlay();
-            this.game.stopGame();
 
-            this.game.audioManager.stopMusic();
-
+        this._quitButton?.addEventListener('click', () => {
+            this._hide(this._pauseOverlay);
+            this._game.stopGame();
             this.showMainMenu();
-
-            this.splashBgm.currentTime = 0;
-            this.splashBgm.play().catch(console.warn);
         });
 
-        // Settings changes
-        // Master volume slider
-        this.masterVolumeRange.addEventListener('input', () => {
-            const vol = parseFloat(this.masterVolumeRange.value);
-            this._applyMuteAndVolumes();
-            this._saveSettings();
-        });
-        // Music volume slider
-        this.musicVolumeRange.addEventListener('input', () => {
-            const vol = parseFloat(this.musicVolumeRange.value);
-            this._applyMuteAndVolumes();
-            this._saveSettings();
-        });
-        // SFX volume slider
-        this.sfxVolumeRange.addEventListener('input', () => {
-            const vol = parseFloat(this.sfxVolumeRange.value);
-            this._applyMuteAndVolumes();
-            this._saveSettings();
-        });
-        // Mute toggle
-        this.muteToggle.addEventListener('change', () => {
-            this._applyMuteAndVolumes();
-            this._saveSettings();
-        });
-
-
-        this.touchToggle.addEventListener('change', () => {
-            this._saveSettings();
+        //  Game-over overlay 
+        this._rematchButton?.addEventListener('click', () => {
+            this.hideGameOverOverlay();
+            this._game.rematch();
+            this._updateHUDVisibility();
             this._updateMobileControlsVisibility();
         });
-        this.difficultySelect.addEventListener('change', () => {
-            this.game.setDifficulty(this.difficultySelect.value);
-            this._saveSettings();
+
+        this._quitToMenuButton?.addEventListener('click', () => {
+            this.hideGameOverOverlay();
+            this._game.stopGame();
+            this.showMainMenu();
         });
 
-        this.pauseButton.addEventListener('click', () => {
-            if (this.game.isRunning() && !this.game.isPaused()) {
-                this.showPauseOverlay();
-                this.game.pauseGame();
+        //  Keyboard shortcuts 
+        window.addEventListener('keydown', e => {
+            if (e.code !== 'Escape') return;
+
+            if (this._isVisible(this._settingsScreen)) {
+                this._onSettingsBack();
+            } else if (this._isVisible(this._instructionsScreen)) {
+                this._hideAllScreens();
+                this._show(this._menuScreen);
+            } else if (this._game.isRunning() && !this._game.isPaused()) {
+                this._show(this._pauseOverlay);
+                this._game.pauseGame();
+                this._updateMobileControlsVisibility();
+            } else if (this._game.isRunning() && this._game.isPaused() && this._isVisible(this._pauseOverlay)) {
+                this._hide(this._pauseOverlay);
+                this._game.resumeGame();
+                this._updateMobileControlsVisibility();
             }
         });
 
-        // using Esc key
-        window.addEventListener('keydown', (e) => {
-            if (e.code === 'Escape') {
-                // If settings is open, close settings
-                if (this.isSettingsVisible()) {
-                    this.onSettingsBack();
-                    return;
-                }
-                // If instructions is open, close instructions
-                if (this.isInstructionsVisible()) {
-                    this.onInstructionsBack();
-                    return;
-                }
-                // If game running and not paused: open pause overlay
-                if (this.game.isRunning() && !this.game.isPaused()) {
-                    this.showPauseOverlay();
-                    this.game.pauseGame();
-                }
-                // If game running and paused: resume
-                else if (this.game.isRunning() && this.game.isPaused()
-                    && this.isPauseOverlayVisible()) {
-                    this.hidePauseOverlay();
-                    this.game.resumeGame();
-                }
-            }
-        });
-
-        // Mobile control events
-        this._setupTouchButton(this.btnLeft, 'left');
-        this._setupTouchButton(this.btnRight, 'right');
-        this._setupTouchButton(this.btnJump, 'jump');
-        this._setupTouchButton(this.btnAttack, 'attack');
-        this._setupTouchButton(this.btnBlock, 'block');
+        //  Mobile touch buttons 
+        this._bindTouchButton(this._btnLeft, 'left');
+        this._bindTouchButton(this._btnRight, 'right');
+        this._bindTouchButton(this._btnJump, 'jump');
+        this._bindTouchButton(this._btnAttack, 'attack');
+        this._bindTouchButton(this._btnHeavy, 'heavy');
+        this._bindTouchButton(this._btnSweep, 'sweep');
+        this._bindTouchButton(this._btnBlock, 'block');
     }
 
-
-    isSettingsVisible() {
-        return this.settingsScreen && !this.settingsScreen.classList.contains('hidden');
-    }
-    isInstructionsVisible() {
-        return this.instructionsScreen && !this.instructionsScreen.classList.contains('hidden');
-    }
-    isPauseOverlayVisible() {
-        return this.pauseOverlay && !this.pauseOverlay.classList.contains('hidden');
-    }
-
-    onSettingsBack() {
-        if (this._settingsParent === 'menu') {
-            this.hideSettings();
-            this.showMainMenu();
-        } else if (this._settingsParent === 'pause') {
-            this.hideSettings();
-            this.showPauseOverlay();
-        }
-        this._settingsParent = null;
-    }
-    onInstructionsBack() {
-        if (this._instructionsParent === 'menu') {
-            this.hideInstructions();
-            this.showMainMenu();
-        }
-        this._instructionsParent = null;
+    _bindTouchButton(elem, action) {
+        if (!elem) return;
+        const down = () => this._game.onVirtualButtonDown(action);
+        const up = () => this._game.onVirtualButtonUp(action);
+        elem.addEventListener('touchstart', e => { e.preventDefault(); down(); }, { passive: false });
+        elem.addEventListener('touchend', e => { e.preventDefault(); up(); }, { passive: false });
+        elem.addEventListener('mousedown', e => { e.preventDefault(); down(); });
+        elem.addEventListener('mouseup', e => { e.preventDefault(); up(); });
+        elem.addEventListener('mouseleave', e => { e.preventDefault(); up(); });
     }
 
-    showMainMenu() {
-        this.hideAllScreens();
-        if (this.menuScreen) {
-            this.menuScreen.classList.remove('hidden');
-        }
-
-        
-        this._updateHUDVisibility();
-        this._updateMobileControlsVisibility();
-
-
-        this.game.audioManager.stopMusic();
-
-        // Start/restart splash BGM
-        this.splashBgm.currentTime = 0;
-        this.splashBgm.play().catch(console.warn);
-    }
-
-    showSettings(parent) {
-        this._settingsParent = parent;
-        // opening from pause
-        if (parent === 'pause' && this.game.isRunning() && !this.game.isPaused()) {
-            this.game.pauseGame();
-        }
-        this.hideAllScreens();
-        if (this.settingsScreen) this.settingsScreen.classList.remove('hidden');
-    }
-    hideSettings() {
-        if (this.settingsScreen) this.settingsScreen.classList.add('hidden');
-    }
-
-    showInstructions(parent) {
-        this._instructionsParent = parent;
-        this.hideAllScreens();
-        if (this.instructionsScreen) this.instructionsScreen.classList.remove('hidden');
-    }
-    hideInstructions() {
-        if (this.instructionsScreen) this.instructionsScreen.classList.add('hidden');
-    }
-
-    showPauseOverlay() {
-        if (this.pauseOverlay) this.pauseOverlay.classList.remove('hidden');
-        this._updateMobileControlsVisibility();
-    }
-    hidePauseOverlay() {
-        if (this.pauseOverlay) this.pauseOverlay.classList.add('hidden');
-        this._updateMobileControlsVisibility();
-    }
+    //  Settings persistence 
 
     _saveSettings() {
-        const settings = {
-            masterVolume: parseFloat(this.masterVolumeRange.value),
-            musicVolume: parseFloat(this.musicVolumeRange.value),
-            sfxVolume: parseFloat(this.sfxVolumeRange.value),
-            muted: this.muteToggle.checked,
-            touchToggle: this.touchToggle.value,
-            difficulty: this.difficultySelect.value,
+        const s = {
+            masterVolume: parseFloat(this._masterVolumeRange?.value ?? 0.5),
+            musicVolume: parseFloat(this._musicVolumeRange?.value ?? 0.5),
+            sfxVolume: parseFloat(this._sfxVolumeRange?.value ?? 0.5),
+            muted: this._muteToggle?.checked ?? false,
+            touchToggle: this._touchToggle?.value ?? 'auto',
+            difficulty: this._difficultySelect?.value ?? 'normal',
         };
-        localStorage.setItem('stickmanSettings', JSON.stringify(settings));
+        localStorage.setItem('stickmanSettings', JSON.stringify(s));
     }
+
     _loadSettings() {
-        const settings = JSON.parse(localStorage.getItem('stickmanSettings') || '{}');
-        // Master volume
-        if (settings.masterVolume != null) {
-            this.masterVolumeRange.value = settings.masterVolume;
-        } else {
-            this.masterVolumeRange.value = 0.5;
-        }
-        // Music volume
-        if (settings.musicVolume != null) {
-            this.musicVolumeRange.value = settings.musicVolume;
-        } else {
-            this.musicVolumeRange.value = 0.5;
-        }
-        // SFX volume
-        if (settings.sfxVolume != null) {
-            this.sfxVolumeRange.value = settings.sfxVolume;
-        } else {
-            this.sfxVolumeRange.value = 0.5;
-        }
-        // Mute
-        if (settings.muted != null) {
-            this.muteToggle.checked = settings.muted;
-        } else {
-            this.muteToggle.checked = false;
-        }
+        let s = {};
+        try { s = JSON.parse(localStorage.getItem('stickmanSettings') ?? '{}'); } catch { /* ignore */ }
 
-        this._applyMuteAndVolumes();
+        if (this._masterVolumeRange) this._masterVolumeRange.value = s.masterVolume ?? 0.5;
+        if (this._musicVolumeRange) this._musicVolumeRange.value = s.musicVolume ?? 0.5;
+        if (this._sfxVolumeRange) this._sfxVolumeRange.value = s.sfxVolume ?? 0.5;
+        if (this._muteToggle) this._muteToggle.checked = s.muted ?? false;
+        if (this._touchToggle) this._touchToggle.value = s.touchToggle ?? 'auto';
+        if (this._difficultySelect) this._difficultySelect.value = s.difficulty ?? 'normal';
 
-        if (settings.touchToggle) {
-            this.touchToggle.value = settings.touchToggle;
+        this._splashBgm.volume = parseFloat(this._masterVolumeRange?.value ?? 0.5);
+        this._applyVolumes();
+    }
+
+    _applyVolumes() {
+        const muted = this._muteToggle?.checked ?? false;
+        const masterVol = parseFloat(this._masterVolumeRange?.value ?? 0.5);
+        const musicVol = parseFloat(this._musicVolumeRange?.value ?? 0.5);
+        const sfxVol = parseFloat(this._sfxVolumeRange?.value ?? 0.5);
+
+        if (muted) {
+            this._game.setMasterVolume(0);
+        } else {
+            this._game.setMasterVolume(masterVol);
+            this._game.setMusicVolume(musicVol);
+            this._game.setSFXVolume(sfxVol);
         }
-        if (settings.difficulty) {
-            this.difficultySelect.value = settings.difficulty;
-            this.game.setDifficulty(settings.difficulty);
-        }
+    }
+
+    //  Visibility helpers 
+
+    _show(el) { el?.classList.remove('hidden'); }
+    _hide(el) { el?.classList.add('hidden'); }
+    _isVisible(el) { return el && !el.classList.contains('hidden'); }
+
+    _hideAllScreens() {
+        [
+            this._menuScreen,
+            this._settingsScreen,
+            this._instructionsScreen,
+            this._pauseOverlay,
+            this._gameOverOverlay,
+        ].forEach(el => this._hide(el));
     }
 
     _updateHUDVisibility() {
-        const inGame = this.game.isRunning() && !this.game.isPaused();
-
-        // Show pause button only when inGame
-        if (inGame) this.pauseButton.classList.remove('hidden');
-        else this.pauseButton.classList.add('hidden');
+        const inGame = this._game.isRunning() && !this._game.isPaused() && !this._game.isGameOver();
+        inGame ? this._show(this._pauseButton) : this._hide(this._pauseButton);
     }
 
     _updateMobileControlsVisibility() {
-        const mode = this.touchToggle.value;
-        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-        let show = false;
-        if (mode === 'on') show = true;
-        else if (mode === 'off') show = false;
-        else if (mode === 'auto') show = isTouchDevice;
+        const mode = this._touchToggle?.value ?? 'auto';
+        const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        const wantShow = mode === 'on' || (mode === 'auto' && isTouch);
+        const canShow = wantShow
+            && this._game.isRunning()
+            && !this._game.isPaused()
+            && !this._game.isGameOver()
+            && !this._isVisible(this._settingsScreen)
+            && !this._isVisible(this._instructionsScreen)
+            && !this._isVisible(this._pauseOverlay)
+            && !this._isVisible(this._gameOverOverlay);
 
-        // show control in game only
-        if (show
-            && this.game.isRunning()
-            && !this.game.isPaused()
-            && !this.isSettingsVisible()
-            && !this.isInstructionsVisible()
-            && !this.isPauseOverlayVisible()
-        ) {
-            this.mobileControls.classList.remove('hidden');
-        } else {
-            this.mobileControls.classList.add('hidden');
-        }
-    }
-
-    _setupTouchButton(elem, action) {
-        if (!elem) return;
-        elem.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.game.onVirtualButtonDown(action);
-        });
-        elem.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            this.game.onVirtualButtonUp(action);
-        });
-        elem.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            this.game.onVirtualButtonDown(action);
-        });
-        elem.addEventListener('mouseup', (e) => {
-            e.preventDefault();
-            this.game.onVirtualButtonUp(action);
-        });
-        elem.addEventListener('mouseleave', (e) => {
-            e.preventDefault();
-            this.game.onVirtualButtonUp(action);
-        });
-    }
-
-    _applyMuteAndVolumes() {
-        const isMuted = this.muteToggle.checked;
-        if (isMuted) {
-            this.game.setMasterVolume(0);
-        } else {
-            const masterVol = parseFloat(this.masterVolumeRange.value);
-            this.game.setMasterVolume(masterVol);
-
-            const musicVol = parseFloat(this.musicVolumeRange.value);
-            const sfxVol = parseFloat(this.sfxVolumeRange.value);
-            this.game.setMusicVolume(musicVol);
-            this.game.setSFXVolume(sfxVol);
-        }
-    }
-
-    hideAllScreens() {
-        [this.menuScreen, this.settingsScreen, this.instructionsScreen, this.pauseOverlay].forEach(el => {
-            if (el) el.classList.add('hidden');
-        });
+        canShow ? this._show(this._mobileControls) : this._hide(this._mobileControls);
     }
 }

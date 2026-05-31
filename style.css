@@ -1,365 +1,512 @@
- body,
- html {
-     margin: 0;
-     padding: 0;
-     width: 100%;
-     height: 100dvh;
-     overflow: hidden;
-     font-family: sans-serif;
-     background: #222;
-     color: #fff;
- }
-
- .screen {
-     position: absolute;
-     top: 0;
-     left: 0;
-     width: 100%;
-     height: 100dvh;
-     display: flex;
-     flex-direction: column;
-     align-items: flex-start;
-     justify-content: flex-end;
-     padding: 3rem;
-     box-sizing: border-box;
-
-     background-image: url('./assets/splash.png');
-     background-size: cover;
-     background-position-y: center;
-     z-index: 10;
-     user-select: none;
-     -moz-user-select: none;
-
-
-     font-family: "Jersey 10", sans-serif;
-     font-weight: 400;
-     font-style: normal;
-
-     animation: wiggle 0.5s infinite;
-
- }
-
-
-
- @keyframes wiggle {
-     0% {
-         background-position-y: center;
-     }
-
-     50% {
-         background-position-y: 49%;
-     }
-
-     100% {
-         background-position-y: center;
-     }
- }
-
-
- .hidden {
-     display: none !important;
- }
-
- .screen h1,
- #pauseOverlay h2 {
-     position: absolute;
-     top: 40px;
-     left: 60px;
-     margin: 0;
-     padding: 0;
-
-     font-size: 5rem;
-     letter-spacing: 5px;
- }
-
-
-
- .btn-group {
-     display: flex;
-     flex-direction: column;
- }
-
- button {
-     font-size: 2rem;
-     font-family: "Jersey 10", sans-serif;
-     font-weight: 400;
-     font-style: normal;
-     text-align: left;
-
-     background: none;
-     padding: 10px 20px;
-     flex: 1;
-     border: none;
-     border-radius: 5px;
-     outline: none;
-     color: #e0e0e0;
-     cursor: pointer;
-
-     transition: transform 0.2s ease-in;
- }
-
- button:focus {
-     transform: translateY(-3px);
-     color: #fff;
- }
-
- button:hover {
-     transform: translateY(-3px);
-     color: #fff;
- }
-
- #gameContainer {
-     position: relative;
-     width: 100%;
-     height: 100dvh;
-     display: grid;
-     place-items: center;
- }
-
- #gameCanvas {
-     display: block;
-     background: #444;
-     height: 100%;
-     width: 100%;
-
-     image-rendering: pixelated;
- }
-
-
- 
- .pause-button {
-     position: absolute;
-     top: 16px;
-     right: calc(50% - 40px);
-     width: 40px;
-     height: 40px;
-     border: none;
-     border-radius: 4px;
-     background: rgba(0, 0, 0, 0.5);
-     color: #fff;
-     font-size: 18px;
-     cursor: pointer;
-     z-index: 5;
-
-
-     padding: 0;
-     display: grid;
-     place-items: center;
-     outline: none;
-
- }
-
- .pause-button:hover,
- .pause-button:active {
-     background: rgba(0, 0, 0, 0.7);
-     transform: translateY(0);
- }
-
-
-
- #settingsScreen h2 {
-     letter-spacing: 10px;
-     font-size: 3rem;
-     padding: 0;
-     margin: 0 0 2rem 0;
- }
-
- #settingsScreen {
-     background-image:
-         linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0.5)),
-         url('./assets/splash.png');
- }
-
- .settings-form {
-     display: flex;
-     flex-direction: column;
-     align-items: flex-start;
-     margin-left: 2rem;
- }
-
- .settings-form label {
-     margin: 8px 0 4px;
-     font-size: 1.3rem;
-     letter-spacing: 5px;
- }
-
- .settings-form input[type="range"],
- .settings-form select {
-     margin-bottom: 12px;
- }
-
- .settings-form select {
-     outline: none;
-     padding: 8px 12px;
-     background-color: #222;
-     color: #e0e0e0;
-     border-radius: 6px;
-     transition: border 0.2s ease;
- }
-
- .settings-form select:hover {
-     border: 1px solid #bdbdbd;
- }
-
- .settings-form select:focus {
-     outline: 1px solid #bdbdbd;
- }
-
- #settingsBackButton,
- #instructionsBackButton {
-     margin-top: 2rem;
-     padding: 5px 20px;
-     flex: 0;
- }
-
- #instructionsScreen {
-     display: flex;
-     flex-direction: column;
-     justify-content: flex-start;
-     background-image:
-         linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0.5)),
-         url('./assets/splash.png');
- }
-
- #instructionsScreen p {
-     margin: 0;
-     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif
- }
-
- #instructionsScreen h2 {
-     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
- }
-
-
-
- /* Mobile controls overlay */
- #mobileControls {
-     position: absolute;
-     bottom: 20px;
-     left: 0;
-     width: 100%;
-     height: 150px;
-     z-index: 20;
- }
-
-
- .touch-button {
-     position: absolute;
-     width: 80px;
-     height: 80px;
-     background: rgba(255, 255, 255, 0.3);
-     border-radius: 50%;
-     touch-action: none;
-     display: flex;
-     align-items: center;
-     justify-content: center;
-     font-size: 24px;
-     color: #fff;
-     user-select: none;
-     transition: transform 0.2s ease;
- }
-
- .touch-button:active,
- .touch-button:active,
- .touch-button:focus {
-     background-color: #222;
- }
-
-
- #btnLeft {
-     left: 20px;
-     bottom: 20px;
- }
-
- #btnRight {
-     left: 130px;
-     bottom: 20px;
- }
-
- #btnJump {
-     right: 130px;
-     bottom: 20px;
- }
-
- #btnAttack {
-     right: 20px;
-     bottom: 20px;
- }
-
- #btnBlock {
-     right: 20px;
-     bottom: 130px;
- }
-
- #rotateOverlay {
-     position: fixed;
-     top: 0;
-     left: 0;
-     right: 0;
-     bottom: 0;
-     background: rgba(0, 0, 0, 0.9);
-     color: white;
-     display: none;
-     align-items: center;
-     justify-content: center;
-     text-align: center;
-     padding: 20px;
-     z-index: 9999;
-     flex-direction: column;
- }
-
- @media screen and (orientation: landscape) and (max-height: 500px) {
-     .screen {
-         padding: 2rem;
-         justify-content: flex-end;
-     }
-
-     .screen h1 {
-         font-size: 2.5rem;
-         top: 2rem;
-         left: 3rem;
-     }
-
-     .btn-group button {
-         font-size: 1.2rem;
-         padding: 8px 16px;
-     }
-
-     #settingsScreen h2 {
-         font-size: 1.5rem;
-         letter-spacing: 5px;
-     }
-
-     .settings-form {
-         margin-left: 1rem;
-         max-height: 70vh;
-         overflow-y: auto;
-
-     }
-
-     .settings-form label {
-         font-size: 1rem;
-         letter-spacing: 3px;
-     }
- }
-
- 
- .instructions-screen,
- #instructionsScreen {
-     overflow-y: auto;
- }
-
- 
- @media screen and (max-height: 500px) {
-     @keyframes wiggle {
-
-         0%,
-         100% {
-             background-position-y: center;
-         }
-
-         50% {
-             background-position-y: 49.5%;
-         }
-     }
- }
+/* 
+   Stickman Fighter — Stylesheet
+   Design: Premium Dark / Neon Arena
+*/
+
+/*  Reset & base  */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    background: #080810;
+    color: #fff;
+    font-family: 'Jersey 10', sans-serif;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/*  Game container & canvas  */
+
+#gameContainer {
+    position: relative;
+    width: 100%;
+    height: 100dvh;
+    display: grid;
+    place-items: center;
+}
+
+#gameCanvas {
+    display: block;
+    background: #0a0a1a;
+    image-rendering: pixelated;
+    /* Size is set by JS — these just prevent layout shifts */
+    max-width: 100%;
+    max-height: 100%;
+}
+
+/*  Screen base (menus & overlays)  */
+
+.screen {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 3rem;
+    z-index: 10;
+
+    background-image: url('./assets/splash.png');
+    background-size: cover;
+    background-position: center;
+
+    animation: bgBreathe 6s ease-in-out infinite;
+}
+
+@keyframes bgBreathe {
+
+    0%,
+    100% {
+        background-position: center 50%;
+    }
+
+    50% {
+        background-position: center 52%;
+    }
+}
+
+/*  Game-over overlay — no background image, just a dark wash  */
+.game-over-screen {
+    background-image: none;
+    background: transparent;
+    justify-content: flex-end;
+    pointer-events: none;
+    /* canvas shows result; only buttons are interactive */
+}
+
+.game-over-screen .btn-group {
+    pointer-events: all;
+}
+
+/*  Hidden utility  */
+
+.hidden {
+    display: none !important;
+}
+
+/*  Typography  */
+
+.screen h1 {
+    position: absolute;
+    top: 40px;
+    left: 60px;
+    margin: 0;
+    font-size: 4.5rem;
+    line-height: 1;
+    letter-spacing: 4px;
+    text-shadow:
+        0 0 20px rgba(168, 85, 247, 0.8),
+        0 0 60px rgba(168, 85, 247, 0.3);
+    color: #f0e6ff;
+}
+
+#pauseOverlay h2 {
+    position: absolute;
+    top: 40px;
+    left: 60px;
+    margin: 0;
+    font-size: 3rem;
+    letter-spacing: 6px;
+    color: #e9d5ff;
+    text-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+}
+
+#settingsScreen h2,
+#instructionsScreen h2 {
+    font-size: 2.4rem;
+    letter-spacing: 8px;
+    margin: 0 0 1.5rem 0;
+    color: #e9d5ff;
+    text-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+}
+
+/*  Buttons  */
+
+.btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+button {
+    font-family: 'Jersey 10', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 400;
+    text-align: left;
+    background: none;
+    border: none;
+    outline: none;
+    padding: 10px 20px;
+    color: rgba(220, 200, 255, 0.75);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: color 0.15s ease, transform 0.15s ease, text-shadow 0.15s ease;
+    position: relative;
+}
+
+button:hover,
+button:focus-visible {
+    color: #fff;
+    transform: translateX(6px);
+    text-shadow: 0 0 12px rgba(168, 85, 247, 0.9);
+    outline: none;
+}
+
+button:active {
+    transform: translateX(3px) scale(0.97);
+}
+
+/*  Pause button (top-center in-game)  */
+
+.pause-button {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    font-size: 16px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(8px);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.8);
+    z-index: 5;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+}
+
+.pause-button:hover {
+    background: rgba(168, 85, 247, 0.25);
+    transform: translateX(-50%) scale(1.05);
+    text-shadow: none;
+    color: #fff;
+}
+
+.pause-button:active {
+    transform: translateX(-50%) scale(0.97);
+}
+
+/*  Settings screen  */
+
+#settingsScreen {
+    background-image:
+        linear-gradient(to right, rgba(0, 0, 0, 0.88) 40%, rgba(0, 0, 0, 0.4)),
+        url('./assets/splash.png');
+    justify-content: flex-start;
+    padding-top: 3rem;
+}
+
+.settings-form {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    margin-left: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.settings-form label {
+    margin-top: 10px;
+    font-size: 1.2rem;
+    letter-spacing: 4px;
+    color: #c4b5fd;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    margin-top: 12px !important;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #a855f7;
+    cursor: pointer;
+}
+
+.settings-form input[type="range"] {
+    width: 220px;
+    accent-color: #a855f7;
+    cursor: pointer;
+}
+
+.settings-form select {
+    padding: 8px 14px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #e9d5ff;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    border-radius: 6px;
+    font-family: 'Jersey 10', sans-serif;
+    font-size: 1.1rem;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    backdrop-filter: blur(4px);
+}
+
+.settings-form select:hover,
+.settings-form select:focus {
+    border-color: rgba(168, 85, 247, 0.7);
+}
+
+#settingsBackButton {
+    margin-top: 0.5rem;
+    flex: 0;
+}
+
+/*  Instructions screen  */
+
+#instructionsScreen {
+    background-image:
+        linear-gradient(to right, rgba(0, 0, 0, 0.88) 40%, rgba(0, 0, 0, 0.4)),
+        url('./assets/splash.png');
+    justify-content: flex-start;
+    padding-top: 3rem;
+    overflow-y: auto;
+    gap: 0;
+}
+
+#instructionsScreen p {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: rgba(220, 200, 255, 0.85);
+    margin: 0 0 6px 0;
+    max-width: 480px;
+}
+
+#instructionsScreen strong {
+    color: #f0abfc;
+}
+
+.controls-table {
+    border-collapse: collapse;
+    margin: 0.5rem 0 1.2rem 0;
+    font-size: 0.9rem;
+    font-family: system-ui, sans-serif;
+}
+
+.controls-table th,
+.controls-table td {
+    padding: 4px 16px 4px 0;
+    text-align: left;
+    color: rgba(220, 200, 255, 0.85);
+    border: none;
+}
+
+.controls-table th {
+    color: #c084fc;
+    letter-spacing: 2px;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    padding-bottom: 8px;
+}
+
+#instructionsBackButton {
+    margin-top: 1rem;
+    flex: 0;
+}
+
+/*  Mobile controls  */
+
+#mobileControls {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 20;
+}
+
+.touch-button {
+    position: absolute;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    border: 2px solid rgba(168, 85, 247, 0.5);
+    background: rgba(168, 85, 247, 0.15);
+    backdrop-filter: blur(4px);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 22px;
+    font-family: 'Jersey 10', sans-serif;
+    display: grid;
+    place-items: center;
+    touch-action: none;
+    pointer-events: all;
+    cursor: pointer;
+    transition: background 0.1s, transform 0.1s;
+    outline: none;
+}
+
+.touch-button:active {
+    background: rgba(168, 85, 247, 0.5);
+    transform: scale(0.92);
+    text-shadow: none;
+}
+
+/* Positions — left cluster */
+.touch-left {
+    left: 20px;
+    bottom: 30px;
+}
+
+.touch-right {
+    left: 110px;
+    bottom: 30px;
+}
+
+.touch-jump {
+    left: 65px;
+    bottom: 120px;
+}
+
+/* Positions — right cluster (diamond layout) */
+/*
+    [U]
+  [I] [J]
+    [K]
+*/
+.touch-attack {
+    right: 30px;
+    bottom: 30px;
+}
+
+/* J — bottom */
+.touch-block {
+    right: 30px;
+    bottom: 120px;
+}
+
+/* K — top */
+.touch-sweep {
+    right: 120px;
+    bottom: 75px;
+}
+
+/* I — left */
+.touch-heavy {
+    right: 30px;
+    bottom: 210px;
+}
+
+/* U — far top */
+
+/*  Rotate overlay  */
+
+#rotateOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 8, 16, 0.96);
+    color: #e9d5ff;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px;
+    z-index: 9999;
+    font-size: 1.3rem;
+    letter-spacing: 2px;
+    text-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+}
+
+/*  Responsive  */
+
+@media screen and (orientation: landscape) and (max-height: 500px) {
+    .screen {
+        padding: 1.5rem 2rem;
+    }
+
+    .screen h1 {
+        font-size: 2.2rem;
+        top: 16px;
+        left: 32px;
+        letter-spacing: 3px;
+    }
+
+    #pauseOverlay h2 {
+        font-size: 1.8rem;
+        top: 16px;
+        left: 32px;
+    }
+
+    #settingsScreen h2,
+    #instructionsScreen h2 {
+        font-size: 1.6rem;
+        letter-spacing: 4px;
+    }
+
+    button {
+        font-size: 1.2rem;
+        padding: 6px 14px;
+    }
+
+    .settings-form {
+        max-height: 65dvh;
+        overflow-y: auto;
+    }
+
+    .settings-form label {
+        font-size: 0.9rem;
+        letter-spacing: 3px;
+    }
+
+    .touch-button {
+        width: 56px;
+        height: 56px;
+        font-size: 16px;
+    }
+
+    .touch-left {
+        left: 12px;
+        bottom: 14px;
+    }
+
+    .touch-right {
+        left: 80px;
+        bottom: 14px;
+    }
+
+    .touch-jump {
+        left: 46px;
+        bottom: 82px;
+    }
+
+    .touch-attack {
+        right: 22px;
+        bottom: 14px;
+    }
+
+    .touch-block {
+        right: 22px;
+        bottom: 82px;
+    }
+
+    .touch-sweep {
+        right: 90px;
+        bottom: 48px;
+    }
+
+    .touch-heavy {
+        right: 22px;
+        bottom: 150px;
+    }
+}

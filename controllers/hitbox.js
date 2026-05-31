@@ -1,4 +1,21 @@
+/**
+ * Hitbox — an axis-aligned bounding box spawned by a Fighter during an attack.
+ * Lives for a fixed number of frames and can only hit each target once.
+ */
 export default class Hitbox {
+    /**
+     * @param {{
+     *   owner: object,
+     *   offsetX: number,
+     *   offsetY: number,
+     *   width: number,
+     *   height: number,
+     *   damage: number,
+     *   knockbackX: number,
+     *   knockbackY: number,
+     *   durationFrames: number,
+     * }} config
+     */
     constructor({ owner, offsetX, offsetY, width, height, damage, knockbackX, knockbackY, durationFrames }) {
         this.owner = owner;
         this.offsetX = offsetX;
@@ -10,57 +27,50 @@ export default class Hitbox {
         this.knockbackY = knockbackY;
         this.duration = durationFrames;
         this.age = 0;
-        this.hasHit = new Set();
+
+        /** @type {Set<object>} — prevents hitting the same target twice */
+        this._hitTargets = new Set();
     }
 
-    update() {
-        this.age++;
-    }
+    //  Lifecycle 
 
-    isExpired() {
-        return this.age >= this.duration;
-    }
+    update() { this.age++; }
+    isExpired() { return this.age >= this.duration; }
+    markHit(target) { this._hitTargets.add(target); }
+
+    //  Geometry 
 
     getBounds() {
-        const owner = this.owner;
-        let x;
-        if (owner.facingRight) {
-            x = owner.x + this.offsetX;
-        } else {
-            x = owner.x + owner.width - this.offsetX - this.width;
-        }
-
+        const { owner, offsetX, width } = this;
+        const x = owner.facingRight
+            ? owner.x + offsetX
+            : owner.x + owner.width - offsetX - width;
         const y = owner.y + this.offsetY;
         return { x, y, width: this.width, height: this.height };
     }
 
     checkCollision(target) {
         if (target === this.owner) return false;
-        if (this.hasHit.has(target)) return false;
-        const hb = this.getBounds();
-        const tb =  target.getHurtboxBounds();
+        if (this._hitTargets.has(target)) return false;
 
-        //AABB collison
-        if (
+        const hb = this.getBounds();
+        const tb = target.getHurtboxBounds();
+
+        // AABB overlap test
+        return (
             hb.x < tb.x + tb.width &&
             hb.x + hb.width > tb.x &&
             hb.y < tb.y + tb.height &&
             hb.y + hb.height > tb.y
-        ) {
-            return true;
-        }
-        return false
+        );
     }
 
-    markHit(target) {
-        this.hasHit.add(target);
-    }
+    //  Debug 
 
-    //fordebuging >_-
     drawDebug(ctx) {
         const { x, y, width, height } = this.getBounds();
         ctx.save();
-        ctx.strokeStyle = 'red';
+        ctx.strokeStyle = 'rgba(255, 50, 50, 0.8)';
         ctx.lineWidth = 2;
         ctx.strokeRect(x, y, width, height);
         ctx.restore();

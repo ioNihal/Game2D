@@ -1,42 +1,44 @@
+/**
+ * InputHandler — tracks keyboard state for the current and previous frame.
+ * Virtual key methods allow mobile/touch code to inject inputs.
+ */
 export default class InputHandler {
     constructor() {
-        this.keys = {};
-        this.prevKeys = {};
-        this.justPressed = {};
+        /** @type {Record<string, boolean>} */
+        this._keys = {};
+        /** @type {Record<string, boolean>} */
+        this._prevKeys = {};
 
-        window.addEventListener('keydown', (e) => {
-            if (!this.keys[e.code]) {
-                this.keys[e.code] = true;
-                this.justPressed[e.code] = true;
-            }
+        window.addEventListener('keydown', e => {
+            this._keys[e.code] = true;
         });
 
-        window.addEventListener('keyup', (e) => {
-            this.keys[e.code] = false;
+        window.addEventListener('keyup', e => {
+            this._keys[e.code] = false;
         });
     }
 
+    //  Query 
+
+    /** True while the key is held. */
     isKeyDown(code) {
-        return !!this.keys[code];
+        return !!this._keys[code];
     }
 
+    /** True only on the first frame the key is pressed (rising edge). */
     isKeyJustPressed(code) {
-        return !!this.keys[code] && !this.prevKeys[code];
+        return !!this._keys[code] && !this._prevKeys[code];
     }
 
-    setVirtualKeyDown(code) {
-        if (!this.keys[code]) {
-            this.keys[code] = true;
-            this.justPressed[code] = true;
-        }
-    }
+    //  Virtual inputs (touch / mobile) 
 
-    setVirtualKeyUp(code) {
-        this.keys[code] = false;
-    }
+    setVirtualKeyDown(code) { this._keys[code] = true; }
+    setVirtualKeyUp(code) { this._keys[code] = false; }
 
+    //  Frame update 
+
+    /** Must be called at the END of each game frame. */
     update() {
-        this.prevKeys = { ...this.keys };
-        this.justPressed = {};
+        this._prevKeys = { ...this._keys };
     }
 }

@@ -1,73 +1,82 @@
-export const ANIMATIONS = {
-    idle: { frames: 1, frameDuration: 10, loop: true, color: '#FFFFFF' },
-    walk: { frames: 2, frameDuration: 8, loop: true, color: '#00FF00' },
-    jump: { frames: 1, frameDuration: 10, loop: false, color: '#FFA500' },
-    lightPunch: { frames: 3, frameDuration: 6, loop: false, color: '#FF0000' },
-    airPunch: { frames: 2, frameDuration: 6, loop: false, color: '#FF5555' },
-    hit: { frames: 1, frameDuration: 10, loop: false, color: '#FF00FF' },
-    ko: { frames: 1, frameDuration: 10, loop: false, color: '#000000' },
-    block: { frames: 1, frameDuration: 10, loop: true, color: '#0000FF' },
-    blockHit: { frames: 1, frameDuration: 6, loop: false, color: '#5555FF' },
-
-};
-
+/**
+ * AnimationController — drives frame-by-frame sprite playback.
+ * Handles looping vs. one-shot animations and horizontal flip for
+ * left-facing characters.
+ */
 export class AnimationController {
+    /**
+     * @param {Record<string, { frameCount: number, frameDuration: number, loop: boolean, imageKeys: string[] }>} animationsConfig
+     * @param {import('../utils/assetLoader.js').default} assetLoader
+     */
     constructor(animationsConfig, assetLoader) {
-        this.animationsConfig = animationsConfig;
-        this.assetLoader = assetLoader;
-
+        this._config = animationsConfig;
+        this._loader = assetLoader;
         this.current = 'idle';
-        this.frameIndex = 0;
-        this.frameTimer = 0;
+        this._frameIndex = 0;
+        this._frameTimer = 0;
     }
 
+    //  Control 
+
+    /** Switch to `key`; resets to frame 0 only when the key actually changes. */
     setAnimation(key) {
-        if (this.current !== key) {
-            this.current = key;
-            this.frameIndex = 0;
-            this.frameTimer = 0;
-        }
+        if (this.current === key) return;
+        this.current = key;
+        this._frameIndex = 0;
+        this._frameTimer = 0;
     }
 
+    /** Advances the frame timer; must be called once per game frame. */
     update() {
-        const anim = this.animationsConfig[this.current];
+        const anim = this._config[this.current];
         if (!anim) return;
-        this.frameTimer++;
 
-        if (this.frameTimer >= anim.frameDuration) {
-            this.frameTimer = 0;
-            this.frameIndex++;
-            if (this.frameIndex >= anim.frameCount) {
-                if (anim.loop) {
-                    this.frameIndex = 0;
-                } else {
-                    this.frameIndex = anim.frameCount - 1;
-                }
+        this._frameTimer++;
+        if (this._frameTimer >= anim.frameDuration) {
+            this._frameTimer = 0;
+            this._frameIndex++;
+            if (this._frameIndex >= anim.frameCount) {
+                this._frameIndex = anim.loop ? 0 : anim.frameCount - 1;
             }
         }
     }
 
-    draw(ctx, x, y, width, height, facingRight = true) {
-        const anim = this.animationsConfig[this.current];
+    //  Rendering 
+
+    /**
+     * Draws the current frame onto `ctx`.
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {number} x
+     * @param {number} y
+     * @param {number} width
+     * @param {number} height
+     * @param {boolean} [facingRight=true]
+     * @param {number} [drawOffsetY=70]  — vertical nudge to align sprite in bounding box
+     */
+    draw(ctx, x, y, width, height, facingRight = true, drawOffsetY = 70) {
+        const anim = this._config[this.current];
         if (!anim) {
             ctx.fillStyle = '#888';
             ctx.fillRect(x, y, width, height);
             return;
         }
 
-        const imageKey = anim.imageKeys[this.frameIndex];
-        const img = this.assetLoader.getImage(imageKey);
+        const imageKey = anim.imageKeys[this._frameIndex];
+        const img = this._loader.getImage(imageKey);
+
         if (!img) {
             ctx.fillStyle = '#f0f';
             ctx.fillRect(x, y, width, height);
-            console.warn(`Missing image for key ${imageKey}`);
             return;
         }
+
+        const drawY = y + drawOffsetY;
+
         if (facingRight) {
-            ctx.drawImage(img, x, (y + 70), width, height);
+            ctx.drawImage(img, x, drawY, width, height);
         } else {
             ctx.save();
-            ctx.translate(x + width / 2, (y + 70) + height / 2);
+            ctx.translate(x + width / 2, drawY + height / 2);
             ctx.scale(-1, 1);
             ctx.drawImage(img, -width / 2, -height / 2, width, height);
             ctx.restore();
