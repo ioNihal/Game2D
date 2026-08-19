@@ -1,5 +1,5 @@
 import { CONFIG } from '../configs/config.js';
-import { AnimationController } from '../controllers/animation.js';
+import { AnimationController } from '../render/animationController.js';
 import Hitbox from './hitbox.js';
 import { createStateMachine } from '../core/stateMachine.js';
 import { FIGHTER_STATES } from './fighterStates.js';
@@ -234,24 +234,23 @@ export default class Fighter {
         this._animController.update();
     }
 
-    //  Rendering (slim — will move to render/ in Phase 3) 
+    //  Rendering (delegated to the AnimationController — no canvas logic here)
 
     draw(ctx) {
-        // Draw sprite first
         this._animController.draw(ctx, this.x, this.y, this.width, this.height, this.facingRight);
 
-        // Hit flash — white tint drawn on top of the already-rendered sprite
+        // Hit flash — white tint drawn over the sprite
         if (this.flashTimer > 0) {
-            const alpha = (this.flashTimer / 10) * 0.65;
-            ctx.save();
-            ctx.globalAlpha = alpha;
-            try {
-                ctx.filter = 'brightness(0) invert(1)';
-            } catch (e) {
-                // Fallback for browsers with strict filter security or incomplete support
-            }
-            this._animController.draw(ctx, this.x, this.y, this.width, this.height, this.facingRight);
-            ctx.restore();
+            this._animController.drawFlash(
+                ctx,
+                this.x,
+                this.y,
+                this.width,
+                this.height,
+                this.facingRight,
+                70,
+                (this.flashTimer / 10) * 0.65,
+            );
         }
     }
 

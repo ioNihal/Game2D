@@ -10,6 +10,10 @@ import { PLAYER_CHARACTER } from './configs/characters/player.js';
 import { ENEMY_CHARACTER } from './configs/characters/enemy.js';
 import AIController from './controllers/ai.js';
 import UIManager from './ui.js';
+import Renderer from './render/renderer.js';
+import HUD from './render/hud.js';
+import Overlays from './render/overlays.js';
+import FloatingText from './render/floatingText.js';
 
 /** Maps UI touch-button labels to semantic actions (UIManager refactors in Phase 5). */
 const VIRTUAL_BUTTONS = {
@@ -25,24 +29,13 @@ const VIRTUAL_BUTTONS = {
 
 // Canvas setup
 
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+const renderer = new Renderer(document.getElementById('gameCanvas'));
+const ctx = renderer.ctx;
 
-canvas.width = CONFIG.canvasWidth;
-canvas.height = CONFIG.canvasHeight;
-
-function resizeCanvas() {
-    const scaleX = window.innerWidth / CONFIG.canvasWidth;
-    const scaleY = window.innerHeight / CONFIG.canvasHeight;
-    const scale = Math.min(scaleX, scaleY);
-    canvas.style.width = `${CONFIG.canvasWidth * scale}px`;
-    canvas.style.height = `${CONFIG.canvasHeight * scale}px`;
-}
-
-window.addEventListener('load', resizeCanvas);
-window.addEventListener('resize', resizeCanvas);
-window.addEventListener('orientationchange', resizeCanvas);
-resizeCanvas();
+window.addEventListener('load', renderer.resize.bind(renderer));
+window.addEventListener('resize', renderer.resize.bind(renderer));
+window.addEventListener('orientationchange', renderer.resize.bind(renderer));
+renderer.resize();
 
 // Show a loading placeholder immediately
 ctx.fillStyle = '#111';
@@ -80,48 +73,14 @@ ctx.fillText('Loading…', CONFIG.canvasWidth / 2, CONFIG.canvasHeight / 2);
 })();
 
 // 
-// FloatingText — a damage number that drifts upward and fades out
-// 
-
-class FloatingText {
-    constructor(text, x, y) {
-        this.text = text;
-        this.x = x;
-        this.y = y;
-        this.life = CONFIG.floatTextLife;
-        this.maxLife = CONFIG.floatTextLife;
-    }
-
-    update() {
-        this.y -= CONFIG.floatTextSpeed;
-        this.life--;
-    }
-
-    isExpired() { return this.life <= 0; }
-
-    draw(ctx) {
-        const alpha = this.life / this.maxLife;
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        ctx.font = `bold 18px 'Jersey 10', sans-serif`;
-        ctx.fillStyle = '#ffdd44';
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 3;
-        ctx.textAlign = 'center';
-        ctx.strokeText(this.text, this.x, this.y);
-        ctx.fillText(this.text, this.x, this.y);
-        ctx.restore();
-    }
-}
-
-// 
 // Game
 // 
 
 class Game {
     constructor() {
-        this._canvas = canvas;
-        this._ctx = ctx;
+        this._renderer = renderer;
+        this._hud = new HUD();
+        this._overlays = new Overlays();
 
         this._input = new InputHandler();
         this._assetLoader = new AssetLoader();
@@ -469,16 +428,15 @@ class Game {
         this._startRound();
     }
 
-    //  Drawing 
+    //  Drawing
 
     _draw() {
-        const ctx = this._ctx;
+        const ctx = this._renderer.ctx;
 
-        ctx.save();
-        ctx.translate(Math.round(this._shakeX), Math.round(this._shakeY));
+        this._renderer.beginWorld(this._shakeX, this._shakeY);
 
         // Background
-        this._drawBackground(ctx);
+        this._renderer.drawBackground(ctx);
 
         // Fighters
         if (this._player) this._player.draw(ctx);
@@ -487,310 +445,31 @@ class Game {
         // Floating texts
         for (const ft of this._floatingTexts) ft.draw(ctx);
 
-        ctx.restore(); // end shake transform
+        this._renderer.endWorld(); // end shake transform
 
         // HUD (not shaken)
-        if (this._player && this._enemy) this._drawHUD(ctx);
+        if (this._player && this._enemy) {
+            this._hud.draw(ctx, {
+                playerHealth: this._player.health,
+                playerGhostHP: this._playerGhostHP,
+                playerMaxHealth: this._player.maxHealth,
+                enemyHealth: this._enemy.health,
+                enemyGhostHP: this._enemyGhostHP,
+                enemyMaxHealth: this._enemy.maxHealth,
+                playerWins: this._playerWins,
+                enemyWins: this._enemyWins,
+                round: this._round,
+            });
+        }
 
         // Round intro overlay
-        if (this._introActive) this._drawIntro(ctx);
+        if (this._introActive) this._overlays.drawIntro(ctx, { round: this._round, timer: this._introTimer });
 
         // Game over overlay
-        if (this._gameOver) this._drawGameOver(ctx);
+        if (this._gameOver) this._overlays.drawGameOver(ctx, { winner: this._winner, playerWins: this._playerWins, enemyWins: this._enemyWins });
 
         // Combo display
-        if (this._comboCount >= 2 && this._comboTimer > 0) this._drawCombo(ctx);
-    }
-
-    _drawBackground(ctx) {
-        const W = CONFIG.canvasWidth;
-        const H = CONFIG.canvasHeight;
-        const G = CONFIG.groundY;
-
-        // Sky gradient
-        const sky = ctx.createLinearGradient(0, 0, 0, G);
-        sky.addColorStop(0, '#0a0a1a');
-        sky.addColorStop(0.6, '#1a1030');
-        sky.addColorStop(1, '#2a1545');
-        ctx.fillStyle = sky;
-        ctx.fillRect(0, 0, W, G);
-
-        // Ground
-        const ground = ctx.createLinearGradient(0, G, 0, H);
-        ground.addColorStop(0, '#1a1020');
-        ground.addColorStop(1, '#0d0810');
-        ctx.fillStyle = ground;
-        ctx.fillRect(0, G, W, H - G);
-
-        // Neon floor line
-        ctx.save();
-        ctx.shadowColor = '#a855f7';
-        ctx.shadowBlur = 18;
-        ctx.strokeStyle = '#c084fc';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(0, G);
-        ctx.lineTo(W, G);
-        ctx.stroke();
-        ctx.restore();
-
-        // Arena edge pillars (decorative)
-        this._drawPillar(ctx, 30, G);
-        this._drawPillar(ctx, W - 55, G);
-
-        // Crowd silhouette
-        this._drawCrowd(ctx, W, G);
-
-        // Ground grid lines (perspective)
-        ctx.save();
-        ctx.globalAlpha = 0.12;
-        ctx.strokeStyle = '#c084fc';
-        ctx.lineWidth = 1;
-        const rows = 5;
-        for (let r = 0; r <= rows; r++) {
-            const t = r / rows;
-            const y = G + t * (H - G);
-            const xL = W / 2 * (1 - t);
-            const xR = W - xL;
-            ctx.beginPath();
-            ctx.moveTo(xL, y);
-            ctx.lineTo(xR, y);
-            ctx.stroke();
-        }
-        const cols = 7;
-        for (let c = 0; c <= cols; c++) {
-            const t = c / cols;
-            ctx.beginPath();
-            ctx.moveTo(W * t, G);
-            ctx.lineTo(W / 2 * (1 - (1 - t * 2 < 0 ? -(t * 2 - 1) : 1 - t * 2)), H);
-            ctx.stroke();
-        }
-        ctx.restore();
-
-        // Black footer behind sprite overflow
-        ctx.fillStyle = '#0d0810';
-        ctx.fillRect(0, G + 1, 120, H - G - 1);
-        ctx.fillRect(W - 145, G + 1, 145, H - G - 1);
-    }
-
-    _drawPillar(ctx, x, groundY) {
-        const h = 160;
-        ctx.save();
-        const grad = ctx.createLinearGradient(x, groundY - h, x + 25, groundY - h);
-        grad.addColorStop(0, '#6b21a8');
-        grad.addColorStop(1, '#1e0a2e');
-        ctx.fillStyle = grad;
-        ctx.fillRect(x, groundY - h, 25, h);
-
-        // Neon edge
-        ctx.shadowColor = '#a855f7';
-        ctx.shadowBlur = 10;
-        ctx.strokeStyle = '#7c3aed';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x, groundY - h, 25, h);
-        ctx.restore();
-    }
-
-    _drawCrowd(ctx, W, G) {
-        ctx.save();
-        ctx.globalAlpha = 0.18;
-        // Simple crowd of silhouette bumps
-        ctx.fillStyle = '#4a1d6e';
-        for (let i = 0; i < W; i += 18) {
-            const h = 20 + Math.sin(i * 0.3) * 8 + Math.sin(i * 0.7 + 1) * 5;
-            ctx.beginPath();
-            ctx.arc(i + 9, G - h, 9, Math.PI, 0);
-            ctx.fill();
-        }
-        ctx.restore();
-    }
-
-    //  HUD 
-
-    _drawHUD(ctx) {
-        const BAR_W = 220;
-        const BAR_H = 18;
-        const PAD = 20;
-        const BAR_Y = PAD;
-
-        // Player bar (left)
-        this._drawHealthBar(ctx, PAD, BAR_Y, BAR_W, BAR_H, this._player.health, this._playerGhostHP, this._player.maxHealth);
-        // Enemy bar (right)
-        this._drawHealthBar(ctx, CONFIG.canvasWidth - BAR_W - PAD, BAR_Y, BAR_W, BAR_H, this._enemy.health, this._enemyGhostHP, this._enemy.maxHealth);
-
-        // Name plates
-        ctx.save();
-        ctx.font = `bold 13px 'Jersey 10', sans-serif`;
-        ctx.fillStyle = '#e2e8f0';
-        ctx.textAlign = 'left';
-        ctx.fillText('YOU', PAD, BAR_Y + BAR_H + 14);
-        ctx.textAlign = 'right';
-        ctx.fillText('ENEMY', CONFIG.canvasWidth - PAD, BAR_Y + BAR_H + 14);
-        ctx.restore();
-
-        // Round + score indicator (top center)
-        this._drawRoundInfo(ctx);
-    }
-
-    _drawHealthBar(ctx, x, y, w, h, hp, ghostHp, maxHp) {
-        const pct = Math.max(0, hp) / maxHp;
-        const ghostPct = Math.max(0, ghostHp) / maxHp;
-
-        // Background track
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
-
-        // Ghost bar (orange, lags behind real HP)
-        ctx.fillStyle = 'rgba(251, 146, 60, 0.55)';
-        ctx.fillRect(x, y, w * ghostPct, h);
-
-        // Actual HP bar with gradient
-        const hpW = w * pct;
-        if (hpW > 0) {
-            const grad = ctx.createLinearGradient(x, y, x + hpW, y);
-            if (pct > 0.5) { grad.addColorStop(0, '#22c55e'); grad.addColorStop(1, '#4ade80'); }
-            else if (pct > 0.25) { grad.addColorStop(0, '#f59e0b'); grad.addColorStop(1, '#fbbf24'); }
-            else { grad.addColorStop(0, '#ef4444'); grad.addColorStop(1, '#f87171'); }
-            ctx.fillStyle = grad;
-            ctx.fillRect(x, y, hpW, h);
-        }
-
-        // Border
-        ctx.save();
-        ctx.shadowColor = pct > 0.5 ? '#22c55e' : pct > 0.25 ? '#f59e0b' : '#ef4444';
-        ctx.shadowBlur = 6;
-        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x, y, w, h);
-        ctx.restore();
-    }
-
-    _drawRoundInfo(ctx) {
-        const cx = CONFIG.canvasWidth / 2;
-        ctx.save();
-        ctx.textAlign = 'center';
-
-        // Round label
-        ctx.font = `bold 14px 'Jersey 10', sans-serif`;
-        ctx.fillStyle = '#c4b5fd';
-        ctx.fillText(`ROUND ${this._round}`, cx, 58);
-
-        // Win pips
-        const pipR = 5;
-        const pipGap = 14;
-        const total = CONFIG.roundsToWin;
-        const rowY = 34;
-
-        // Player pips (left of center)
-        for (let i = 0; i < total; i++) {
-            ctx.beginPath();
-            ctx.arc(cx - 20 - i * pipGap, rowY, pipR, 0, Math.PI * 2);
-            ctx.fillStyle = i < this._playerWins ? '#22c55e' : 'rgba(255,255,255,0.2)';
-            ctx.fill();
-        }
-        // Enemy pips (right of center)
-        for (let i = 0; i < total; i++) {
-            ctx.beginPath();
-            ctx.arc(cx + 20 + i * pipGap, rowY, pipR, 0, Math.PI * 2);
-            ctx.fillStyle = i < this._enemyWins ? '#ef4444' : 'rgba(255,255,255,0.2)';
-            ctx.fill();
-        }
-        ctx.restore();
-    }
-
-    _roundRect(ctx, x, y, w, h, r) {
-        ctx.beginPath();
-        ctx.moveTo(x + r, y);
-        ctx.lineTo(x + w - r, y);
-        ctx.arcTo(x + w, y, x + w, y + r, r);
-        ctx.lineTo(x + w, y + h - r);
-        ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-        ctx.lineTo(x + r, y + h);
-        ctx.arcTo(x, y + h, x, y + h - r, r);
-        ctx.lineTo(x, y + r);
-        ctx.arcTo(x, y, x + r, y, r);
-        ctx.closePath();
-    }
-
-    //  Overlays 
-
-    _drawIntro(ctx) {
-        const W = CONFIG.canvasWidth;
-        const H = CONFIG.canvasHeight;
-        const t = 1 - this._introTimer / CONFIG.roundIntroMs;
-
-        // Fade-in → hold → fade-out
-        let alpha;
-        if (t < 0.2) alpha = t / 0.2;
-        else if (t < 0.7) alpha = 1;
-        else alpha = (1 - t) / 0.3;
-
-        ctx.save();
-        ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(0, 0, W, H);
-
-        const roundDone = t > 0.65;
-        const text = roundDone ? 'FIGHT!' : `ROUND ${this._round}`;
-
-        ctx.font = `bold 72px 'Jersey 10', sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.shadowColor = roundDone ? '#fbbf24' : '#c084fc';
-        ctx.shadowBlur = 30;
-        ctx.fillStyle = roundDone ? '#fef08a' : '#e9d5ff';
-        ctx.fillText(text, W / 2, H / 2 + 20);
-        ctx.restore();
-    }
-
-    _drawGameOver(ctx) {
-        const W = CONFIG.canvasWidth;
-        const H = CONFIG.canvasHeight;
-        const matchOver = this._playerWins >= CONFIG.roundsToWin || this._enemyWins >= CONFIG.roundsToWin;
-
-        ctx.fillStyle = 'rgba(0,0,0,0.65)';
-        ctx.fillRect(0, 0, W, H);
-
-        ctx.save();
-        ctx.textAlign = 'center';
-
-        // Result text
-        let resultText;
-        if (matchOver) {
-            resultText = this._playerWins >= CONFIG.roundsToWin ? 'YOU WIN THE MATCH!' : 'ENEMY WINS THE MATCH';
-        } else {
-            resultText = this._winner === 'player' ? 'ROUND WIN!' : 'ROUND LOST';
-        }
-
-        ctx.font = `bold 52px 'Jersey 10', sans-serif`;
-        ctx.shadowColor = this._winner === 'player' ? '#22c55e' : '#ef4444';
-        ctx.shadowBlur = 25;
-        ctx.fillStyle = this._winner === 'player' ? '#86efac' : '#fca5a5';
-        ctx.fillText(resultText, W / 2, H / 2 - 20);
-
-        // Score
-        ctx.font = `24px 'Jersey 10', sans-serif`;
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = '#c4b5fd';
-        ctx.fillText(`${this._playerWins} — ${this._enemyWins}`, W / 2, H / 2 + 20);
-
-        // Rematch hint
-        ctx.font = `18px 'Jersey 10', sans-serif`;
-        ctx.fillStyle = 'rgba(255,255,255,0.6)';
-        ctx.fillText(matchOver ? 'Press REMATCH to play again' : 'Press NEXT ROUND or QUIT', W / 2, H / 2 + 55);
-        ctx.restore();
-    }
-
-    _drawCombo(ctx) {
-        if (this._comboCount < 2) return;
-        const W = CONFIG.canvasWidth;
-        ctx.save();
-        ctx.textAlign = 'center';
-        ctx.font = `bold 28px 'Jersey 10', sans-serif`;
-        ctx.shadowColor = '#fbbf24';
-        ctx.shadowBlur = 15;
-        ctx.fillStyle = '#fef08a';
-        ctx.fillText(`${this._comboCount}-HIT COMBO!`, W / 2, CONFIG.canvasHeight - 30);
-        ctx.restore();
+        if (this._comboCount >= 2 && this._comboTimer > 0) this._overlays.drawCombo(ctx, this._comboCount);
     }
 }
 
