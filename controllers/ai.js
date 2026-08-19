@@ -18,8 +18,8 @@ import { CONFIG } from '../configs/config.js';
  */
 export default class AIController {
     /**
-     * @param {import('./fighter.js').default} fighter     — the AI's fighter
-     * @param {import('./fighter.js').default} opponent    — the player
+     * @param {import('../entities/fighter.js').default} fighter     — the AI's fighter
+     * @param {import('../entities/fighter.js').default} opponent    — the player
      * @param {{ difficulty?: 'easy'|'normal'|'hard' }} [opts]
      */
     constructor(fighter, opponent, opts = {}) {

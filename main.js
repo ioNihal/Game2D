@@ -1,11 +1,13 @@
 import InputHandler from './input/inputHandler.js';
 import AssetLoader from './utils/assetLoader.js';
 import AudioManager from './utils/audioManager.js';
-import { ANIMATION_CONFIG } from './configs/animationConfig.js';
-import Fighter from './controllers/fighter.js';
+import EventBus from './core/eventBus.js';
+import Fighter from './entities/fighter.js';
+import CombatSystem from './systems/combat.js';
 import { CONFIG } from './configs/config.js';
-import { ATTACKS } from './configs/attack.js';
 import { ASSET_MANIFEST } from './configs/assets.js';
+import { PLAYER_CHARACTER } from './configs/characters/player.js';
+import { ENEMY_CHARACTER } from './configs/characters/enemy.js';
 import AIController from './controllers/ai.js';
 import UIManager from './ui.js';
 
@@ -126,6 +128,12 @@ class Game {
         this._audioManager = new AudioManager();
         this._ui = new UIManager(this);
 
+        // Event bus: systems emit, UI/audio side-effects subscribe
+        this._bus = new EventBus();
+        this._combat = new CombatSystem({ bus: this._bus });
+        this._bus.on('sfx', ({ sound }) => this._audioManager.playSFX(sound));
+        this._bus.on('combat:hit', (payload) => this._onCombatHit(payload));
+
         // Round scoring
         this._playerWins = 0;
         this._enemyWins = 0;
@@ -146,7 +154,6 @@ class Game {
         this._shakeY = 0;
 
         // Visual collections
-        this._hitboxes = [];
         this._floatingTexts = [];
 
         // Ghost health bar (lag behind real HP visually)
@@ -184,55 +191,25 @@ class Game {
 
     //  Fighter / AI factory 
 
-    _buildAnimationsConfig(charKey) {
-        const result = {};
-        for (const [animKey, cfg] of Object.entries(ANIMATION_CONFIG[charKey])) {
-            const imageKeys = [];
-            for (let i = 1; i <= cfg.frameCount; i++) {
-                imageKeys.push(`${charKey}_${animKey}${i}`);
-            }
-            result[animKey] = {
-                frameCount: cfg.frameCount,
-                frameDuration: cfg.frameDuration,
-                loop: cfg.loop,
-                imageKeys,
-            };
-        }
-        return result;
-    }
-
     _initGameObjects() {
-        const playerAnims = this._buildAnimationsConfig('player');
-        const enemyAnims = this._buildAnimationsConfig('enemy');
-
-        const shared = {
-            width: 250,
-            height: 280,
-            attacks: ATTACKS,
-            maxHealth: 100,
-            assetLoader: this._assetLoader,
-            audioManager: this._audioManager,
-        };
-
         this._player = new Fighter({
-            ...shared,
-            name: 'Player',
-            charKey: 'player',
-            x: 100,
-            y: CONFIG.groundY - 280,
-            animationsConfig: playerAnims,
+            character: PLAYER_CHARACTER,
+            x: PLAYER_CHARACTER.start.x,
+            y: CONFIG.groundY - PLAYER_CHARACTER.physics.height,
+            assetLoader: this._assetLoader,
+            bus: this._bus,
         });
 
         this._enemy = new Fighter({
-            ...shared,
-            name: 'Enemy',
-            charKey: 'enemy',
-            x: CONFIG.canvasWidth - 100 - 250,
-            y: CONFIG.groundY - 280,
-            animationsConfig: enemyAnims,
+            character: ENEMY_CHARACTER,
+            x: ENEMY_CHARACTER.start.x,
+            y: CONFIG.groundY - ENEMY_CHARACTER.physics.height,
+            assetLoader: this._assetLoader,
+            bus: this._bus,
         });
 
-        this._enemy.facingRight = false;
+        this._combat.setFighters([this._player, this._enemy]);
+        this._combat.clear();
 
         this._enemyAI = new AIController(this._enemy, this._player, {
             difficulty: this._ui.getDifficulty(),
@@ -244,7 +221,6 @@ class Game {
         this._enemyGhostHP = this._enemy.health;
 
         // Reset collections
-        this._hitboxes = [];
         this._floatingTexts = [];
 
         this._gameOver = false;
@@ -365,16 +341,11 @@ class Game {
         this._enemyAI.update();
         this._enemy.update();
 
-        // Collect pending hitboxes
+        // Collect + resolve hitboxes (emits combat:hit events)
         for (const fighter of [this._player, this._enemy]) {
-            if (fighter.pendingHitbox) {
-                this._hitboxes.push(fighter.pendingHitbox);
-                fighter.pendingHitbox = null;
-            }
+            this._combat.collect(fighter);
         }
-
-        // Process hitboxes
-        this._updateHitboxes();
+        this._combat.update();
 
         // Update visuals
         this._updateFloatingTexts();
@@ -386,49 +357,37 @@ class Game {
         this._checkRoundEnd();
     }
 
-    //  Hitbox resolution 
+    //  Combat event side-effects (visual + audio)
 
-    _updateHitboxes() {
-        for (let i = this._hitboxes.length - 1; i >= 0; i--) {
-            const hb = this._hitboxes[i];
-            hb.update();
+    /**
+     * Handles a resolved hit: floating damage number, screen shake, combo
+     * tracking, and the corresponding sound effect.
+     */
+    _onCombatHit({ attacker, damage, blocked, ko, x, y, big }) {
+        if (damage > 0) {
+            this._floatingTexts.push(new FloatingText(
+                `-${Math.round(damage)}`,
+                x,
+                y
+            ));
 
-            for (const target of [this._player, this._enemy]) {
-                if (!hb.checkCollision(target)) continue;
+            // Screen shake proportional to damage
+            this._triggerShake(big ? CONFIG.shakeMagnitude * 1.5 : CONFIG.shakeMagnitude);
 
-                const dir = hb.owner.facingRight ? 1 : -1;
-                const prevHP = target.health;
-                target.takeHit(hb.damage, hb.knockbackX * dir, hb.knockbackY);
-                hb.markHit(target);
-
-                // Floating damage number
-                const dmg = prevHP - target.health;
-                if (dmg > 0) {
-                    const hurtbox = target.getHurtboxBounds();
-                    this._floatingTexts.push(new FloatingText(
-                        `-${Math.round(dmg)}`,
-                        hurtbox.x + hurtbox.width / 2,
-                        hurtbox.y
-                    ));
-
-                    // Screen shake proportional to damage
-                    const isBigHit = hb.owner.currentAttack?.name === 'heavyPunch';
-                    this._triggerShake(isBigHit ? CONFIG.shakeMagnitude * 1.5 : CONFIG.shakeMagnitude);
-
-                    // Combo tracking
-                    const who = (hb.owner === this._player) ? 'player' : 'enemy';
-                    if (this._comboOwner === who) {
-                        this._comboCount++;
-                    } else {
-                        this._comboCount = 1;
-                        this._comboOwner = who;
-                    }
-                    this._comboTimer = 90; // reset window
-                }
+            // Combo tracking
+            const who = (attacker === this._player) ? 'player' : 'enemy';
+            if (this._comboOwner === who) {
+                this._comboCount++;
+            } else {
+                this._comboCount = 1;
+                this._comboOwner = who;
             }
-
-            if (hb.isExpired()) this._hitboxes.splice(i, 1);
+            this._comboTimer = 90; // reset window
         }
+
+        if (blocked) this._audioManager.playSFX('block');
+        else if (ko) this._audioManager.playSFX('ko');
+        else this._audioManager.playSFX('hit');
     }
 
     //  Visual systems 
@@ -524,9 +483,6 @@ class Game {
         // Fighters
         if (this._player) this._player.draw(ctx);
         if (this._enemy) this._enemy.draw(ctx);
-
-        // Hitbox debug (comment out for release)
-        // for (const hb of this._hitboxes) hb.drawDebug(ctx);
 
         // Floating texts
         for (const ft of this._floatingTexts) ft.draw(ctx);
