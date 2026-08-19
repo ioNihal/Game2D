@@ -1,5 +1,7 @@
 /** Central game constants. Import everywhere instead of magic numbers. */
 export const CONFIG = Object.freeze({
+    // Debug — enable with `?debug` URL param (killswitch + hitbox overlay)
+    debug: typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug'),
     // Canvas
     canvasWidth:  800,
     canvasHeight: 450,
@@ -29,4 +31,5 @@ export const CONFIG = Object.freeze({
     // Rounds
     roundsToWin:  2,         // first to this many round wins takes the match
     roundIntroMs: 1500,      // ms before "FIGHT!" fades and combat begins
+    koDelayMs:    1500,      // ms a KO'd fighter lies before the round settles
 });

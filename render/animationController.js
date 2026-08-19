@@ -16,7 +16,7 @@ export class AnimationController {
         this._frameTimer = 0;
     }
 
-    //  Control 
+    //  Control
 
     /** Switch to `key`; resets to frame 0 only when the key actually changes. */
     setAnimation(key) {
@@ -41,7 +41,7 @@ export class AnimationController {
         }
     }
 
-    //  Rendering 
+    //  Rendering
 
     /**
      * Draws the current frame onto `ctx`.
@@ -51,9 +51,10 @@ export class AnimationController {
      * @param {number} width
      * @param {number} height
      * @param {boolean} [facingRight=true]
-     * @param {number} [drawOffsetY=70]  — vertical nudge to align sprite in bounding box
+     * @param {number} [drawOffsetY]  — vertical nudge; falls back to the
+     *                                  sprite config's drawOffsetY, then 70
      */
-    draw(ctx, x, y, width, height, facingRight = true, drawOffsetY = 70) {
+    draw(ctx, x, y, width, height, facingRight = true, drawOffsetY) {
         const anim = this._config[this.current];
         if (!anim) {
             ctx.fillStyle = '#888';
@@ -70,7 +71,8 @@ export class AnimationController {
             return;
         }
 
-        const drawY = y + drawOffsetY;
+        const offsetY = drawOffsetY ?? anim.drawOffsetY ?? 70;
+        const drawY = y + offsetY;
 
         if (facingRight) {
             ctx.drawImage(img, x, drawY, width, height);
@@ -81,5 +83,28 @@ export class AnimationController {
             ctx.drawImage(img, -width / 2, -height / 2, width, height);
             ctx.restore();
         }
+    }
+
+    /**
+     * Re-draws the current frame with a white hit-flash tint.
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {number} x
+     * @param {number} y
+     * @param {number} width
+     * @param {number} height
+     * @param {boolean} [facingRight=true]
+     * @param {number} [drawOffsetY=0]  — vertical nudge; falls back to the sprite config
+     * @param {number} [alpha=0.65]  — flash opacity (caller fades it over time)
+     */
+    drawFlash(ctx, x, y, width, height, facingRight = true, drawOffsetY, alpha = 0.65) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        try {
+            ctx.filter = 'brightness(0) invert(1)';
+        } catch (e) {
+            // Fallback for browsers with strict filter security or incomplete support
+        }
+        this.draw(ctx, x, y, width, height, facingRight, drawOffsetY);
+        ctx.restore();
     }
 }

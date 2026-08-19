@@ -1,9 +1,13 @@
 /**
  * AudioManager — Web Audio API wrapper for music and SFX.
  * Supports master/music/sfx gain chains with mute and volume control.
+ * Subscribes to SettingsStore for reactive volume/mute changes.
  */
 export default class AudioManager {
-    constructor() {
+    /**
+     * @param {{ settingsStore?: import('../ui/settingsStore.js').default }} [opts]
+     */
+    constructor({ settingsStore } = {}) {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         this._ctx = new AudioContextClass();
 
@@ -25,6 +29,12 @@ export default class AudioManager {
 
         /** @type {AudioBufferSourceNode|null} */
         this._currentMusicSource = null;
+
+        // Subscribe to settings changes
+        if (settingsStore) {
+            settingsStore.onChange(s => this._applySettings(s));
+            this._applySettings(settingsStore.getAll());
+        }
     }
 
     //  Context 
@@ -112,7 +122,7 @@ export default class AudioManager {
 
         const source = this._ctx.createBufferSource();
         source.buffer = buffer;
-        source.loop = loop; // BUG FIX: was `source.loop;` (no-op)
+        source.loop = loop;
 
         const gain = this._ctx.createGain();
         gain.gain.value = volume;
@@ -130,9 +140,26 @@ export default class AudioManager {
         this._currentMusicSource = null;
     }
 
+    /** True when a buffer for `key` is loaded (used for SFX fallback resolution). */
+    has(key) {
+        return this._buffers.has(key);
+    }
+
     //  Volume control 
 
     setMasterVolume(val) { this._masterGain.gain.value = Math.max(0, Math.min(1, val)); }
     setMusicVolume(val) { this._musicGain.gain.value = Math.max(0, Math.min(1, val)); }
     setSFXVolume(val) { this._sfxGain.gain.value = Math.max(0, Math.min(1, val)); }
+
+    //  Settings subscription 
+
+    _applySettings(s) {
+        if (s.muted) {
+            this.setMasterVolume(0);
+        } else {
+            this.setMasterVolume(s.masterVolume);
+            this.setMusicVolume(s.musicVolume);
+            this.setSFXVolume(s.sfxVolume);
+        }
+    }
 }
