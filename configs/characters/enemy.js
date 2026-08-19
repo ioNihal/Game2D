@@ -17,6 +17,21 @@ export const ENEMY_CHARACTER = Object.freeze({
     attacks: BASE_ATTACKS,
     physics: { ...BASE_PHYSICS },
 
+    controls: Object.freeze({
+        lightPunch: 'lightPunch',
+        heavyPunch: 'heavyPunch',
+        sweepKick: 'sweepKick',
+        airPunch: 'airPunch',
+    }),
+
+    audio: Object.freeze({
+        jump: Object.freeze({ ref: 'jump' }),
+        punch: Object.freeze({ ref: 'punch' }),
+        hit: Object.freeze({ ref: 'hit' }),
+        block: Object.freeze({ ref: 'block' }),
+        ko: Object.freeze({ ref: 'ko' }),
+    }),
+
     start: {
         x: CONFIG.canvasWidth - 100 - BASE_PHYSICS.width,
         facingRight: false,

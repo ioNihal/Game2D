@@ -10,20 +10,20 @@ import Fighter from './fighter.js';
 /**
  * Build the AnimationController config (image keys) from a character's sprites.
  * @param {object} character
- * @returns {Record<string, { frameCount: number, frameDuration: number, loop: boolean, imageKeys: string[] }>}
+ * @returns {Record<string, { frameCount: number, frameDuration: number, loop: boolean, imageKeys: string[], drawOffsetY?: number }>}
  */
 export function buildAnimationsConfig(character) {
     const result = {};
     for (const [animKey, cfg] of Object.entries(character.sprites)) {
-        const imageKeys = [];
-        for (let i = 1; i <= cfg.frameCount; i++) {
-            imageKeys.push(`${character.id}_${animKey}${i}`);
-        }
+        const frames = cfg.frames
+            ?? Array.from({ length: cfg.frameCount }, (_, i) => String(i + 1));
+        const imageKeys = frames.map(f => `${character.id}_${animKey}${f}`);
         result[animKey] = {
             frameCount: cfg.frameCount,
             frameDuration: cfg.frameDuration,
             loop: cfg.loop,
             imageKeys,
+            drawOffsetY: cfg.drawOffsetY,
         };
     }
     return result;

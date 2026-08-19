@@ -4,6 +4,8 @@ import CombatSystem from '../systems/combat.js';
 import MatchSystem from '../systems/match.js';
 import { CONFIG } from '../configs/config.js';
 import { ASSET_MANIFEST } from '../configs/assets.js';
+import { GAME_AUDIO } from '../configs/audio.js';
+import { getCharacter } from '../configs/characters/index.js';
 import { buildFighter } from '../entities/characterFactory.js';
 import { PLAYER_CHARACTER } from '../configs/characters/player.js';
 import { ENEMY_CHARACTER } from '../configs/characters/enemy.js';
@@ -52,7 +54,10 @@ export default class Game {
         this._match = new MatchSystem({ bus: this._bus });
 
         // System event handlers
-        this._bus.on('sfx', ({ sound }) => this._audio.playSFX(sound));
+        this._bus.on('sfx', ({ sound, actor }) => {
+            const { key, volume } = this._resolveSFX(actor, sound);
+            if (key) this._audio.playSFX(key, { volume });
+        });
         this._bus.on('combat:hit', (payload) => this._onCombatHit(payload));
         this._bus.on('match:roundStart', () => this._onRoundStart());
         this._bus.on('match:roundEnd', () => this._onRoundEnd());
@@ -193,6 +198,38 @@ export default class Game {
         this._enemy?.setStatMultipliers(stats);
     }
 
+    //  Config-driven audio resolution
+
+    /**
+     * Resolve a sound for an actor to a loaded buffer key + volume.
+     * Order: character audio block (urls → ref → fallback) → shared game key.
+     * @param {string} actor  — character id (e.g. 'player', 'enemy')
+     * @param {string} sound  — sound name (e.g. 'punch', 'jump')
+     * @returns {{ key: string|null, volume: number }}
+     */
+    _resolveSFX(actor, sound) {
+        const entry = getCharacter(actor)?.audio?.[sound] ?? {};
+        if (entry.ref) {
+            return { key: this._audio.has(entry.ref) ? entry.ref : null, volume: entry.volume ?? 1 };
+        }
+        const charKey = `${actor}_${sound}`;
+        if (entry.urls || this._audio.has(charKey)) {
+            return { key: this._audio.has(charKey) ? charKey : null, volume: entry.volume ?? 1 };
+        }
+        return { key: this._audio.has(sound) ? sound : null, volume: 1 };
+    }
+
+    /** Pick the BGM entry for the current round (round map → final → default). */
+    _resolveRoundBGM() {
+        const bgm = GAME_AUDIO.bgm ?? {};
+        const { round, playerWins, enemyWins } = this._match;
+        const isFinal = Math.max(playerWins, enemyWins) >= CONFIG.roundsToWin - 1;
+        const entry = isFinal
+            ? bgm.final
+            : (bgm.fight?.[String(round)] ?? bgm.fight?._default);
+        return entry ?? bgm.fight?._default ?? null;
+    }
+
     //  Fixed-timestep logic (one step = 1/60 s)
 
     _step() {
@@ -261,9 +298,15 @@ export default class Game {
         this._shakeX = 0;
         this._shakeY = 0;
 
-        this._audio.resumeContext().then(() =>
-            this._audio.playMusic('bgm_fight', { volume: 0.5, loop: true })
-        );
+        this._audio.resumeContext().then(() => {
+            const track = this._resolveRoundBGM();
+            if (track?.track) {
+                this._audio.playMusic(track.track, {
+                    volume: track.volume,
+                    loop: track.loop !== false,
+                });
+            }
+        });
     }
 
     _onRoundEnd() {
@@ -293,9 +336,16 @@ export default class Game {
             this._comboTimer = 90;
         }
 
-        if (blocked) this._audio.playSFX('block');
-        else if (ko) this._audio.playSFX('ko');
-        else this._audio.playSFX('hit');
+        if (blocked) {
+            const { key, volume } = this._resolveSFX(attacker.id, 'block');
+            if (key) this._audio.playSFX(key, { volume });
+        } else if (ko) {
+            const { key, volume } = this._resolveSFX(attacker.id, 'ko');
+            if (key) this._audio.playSFX(key, { volume });
+        } else {
+            const { key, volume } = this._resolveSFX(attacker.id, 'hit');
+            if (key) this._audio.playSFX(key, { volume });
+        }
     }
 
     //  Visual systems
@@ -347,7 +397,7 @@ export default class Game {
         this._renderer.beginWorld(this._shakeX, this._shakeY);
 
         // Background
-        this._renderer.drawBackground(ctx);
+        this._renderer.drawBackground(ctx, this._assetLoader.getImage('arena_bg'));
 
         // Fighters
         if (this._player) this._player.draw(ctx);

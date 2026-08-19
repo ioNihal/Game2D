@@ -1,9 +1,11 @@
 import { CONFIG } from '../configs/config.js';
+import { ARENA_THEME } from '../configs/arena.js';
 
 /**
- * Renderer — owns the canvas/context, DPR-aware sizing, the arena background,
- * and the screen-shake transform that wraps world layers (background, fighters,
- * floating text). HUD/overlays draw after endWorld() so they are never shaken.
+ * Renderer — owns the canvas/context, DPR-aware sizing, the arena background
+ * (drawn from the config-driven ARENA_THEME), and the screen-shake transform
+ * that wraps world layers (background, fighters, floating text). HUD/overlays
+ * draw after endWorld() so they are never shaken.
  */
 export default class Renderer {
     constructor(canvas) {
@@ -47,51 +49,118 @@ export default class Renderer {
 
     //  Background
 
-    drawBackground(ctx = this._ctx) {
+    /**
+     * Draws the arena from ARENA_THEME (configs/arena.js). Every layer can be
+     * toggled/restyled via config; an optional backdrop image (asset key
+     * 'arena_bg', injected by Game) is drawn behind everything.
+     */
+    drawBackground(ctx = this._ctx, backgroundImage = null) {
         const W = CONFIG.canvasWidth;
         const H = CONFIG.canvasHeight;
         const G = CONFIG.groundY;
+        const theme = ARENA_THEME;
 
-        // Sky gradient
-        const sky = ctx.createLinearGradient(0, 0, 0, G);
-        sky.addColorStop(0, '#0a0a1a');
-        sky.addColorStop(0.6, '#1a1030');
-        sky.addColorStop(1, '#2a1545');
-        ctx.fillStyle = sky;
+        if (backgroundImage) {
+            ctx.drawImage(backgroundImage, 0, 0, W, H);
+        }
+
+        this._drawSky(ctx, theme, W, G);
+        this._drawGround(ctx, theme, W, H, G);
+        this._drawFloorLine(ctx, theme, W, G);
+
+        if (theme.pillars?.enabled) this._drawPillars(ctx, theme, W, G);
+        if (theme.crowd?.enabled) this._drawCrowd(ctx, theme, W, G);
+        if (theme.grid?.enabled) this._drawGrid(ctx, theme, W, H, G);
+        if (theme.footer?.enabled) this._drawFooter(ctx, theme, W, H, G);
+    }
+
+    //  Theme helpers
+
+    /** Vertical linear gradient from { pos, color } stops. */
+    _makeVerticalGradient(ctx, y0, y1, stops) {
+        const grad = ctx.createLinearGradient(0, y0, 0, y1);
+        for (const s of stops ?? []) grad.addColorStop(s.pos, s.color);
+        return grad;
+    }
+
+    _drawSky(ctx, theme, W, G) {
+        ctx.fillStyle = this._makeVerticalGradient(ctx, 0, G, theme.sky?.colors);
         ctx.fillRect(0, 0, W, G);
+    }
 
-        // Ground
-        const ground = ctx.createLinearGradient(0, G, 0, H);
-        ground.addColorStop(0, '#1a1020');
-        ground.addColorStop(1, '#0d0810');
-        ctx.fillStyle = ground;
+    _drawGround(ctx, theme, W, H, G) {
+        ctx.fillStyle = this._makeVerticalGradient(ctx, G, H, theme.ground?.colors);
         ctx.fillRect(0, G, W, H - G);
+    }
 
-        // Neon floor line
+    _drawFloorLine(ctx, theme, W, G) {
+        const fl = theme.floorLine ?? {};
         ctx.save();
-        ctx.shadowColor = '#a855f7';
-        ctx.shadowBlur = 18;
-        ctx.strokeStyle = '#c084fc';
-        ctx.lineWidth = 2;
+        if (fl.glow) {
+            ctx.shadowColor = fl.glow;
+            ctx.shadowBlur = fl.glowBlur ?? 18;
+        }
+        ctx.strokeStyle = fl.color ?? '#c084fc';
+        ctx.lineWidth = fl.width ?? 2;
         ctx.beginPath();
         ctx.moveTo(0, G);
         ctx.lineTo(W, G);
         ctx.stroke();
         ctx.restore();
+    }
 
-        // Arena edge pillars (decorative)
-        this._drawPillar(ctx, 30, G);
-        this._drawPillar(ctx, W - 55, G);
+    _drawPillars(ctx, theme, W, G) {
+        for (const col of theme.pillars.columns ?? []) {
+            const x = col.x < 0 ? W + col.x : col.x;
+            this._drawPillar(ctx, theme, x, G, col);
+        }
+    }
 
-        // Crowd silhouette
-        this._drawCrowd(ctx, W, G);
-
-        // Ground grid lines (perspective)
+    _drawPillar(ctx, theme, x, groundY, col) {
+        const w = col.width ?? 25;
+        const h = col.height ?? 160;
         ctx.save();
-        ctx.globalAlpha = 0.12;
-        ctx.strokeStyle = '#c084fc';
-        ctx.lineWidth = 1;
-        const rows = 5;
+        const grad = ctx.createLinearGradient(x, groundY - h, x + w, groundY - h);
+        for (const s of theme.pillars.gradient ?? []) grad.addColorStop(s.pos, s.color);
+        ctx.fillStyle = grad;
+        ctx.fillRect(x, groundY - h, w, h);
+
+        // Neon edge
+        const e = theme.pillars.edge ?? {};
+        if (e.glow) {
+            ctx.shadowColor = e.glow;
+            ctx.shadowBlur = e.glowBlur ?? 10;
+        }
+        ctx.strokeStyle = e.color ?? '#7c3aed';
+        ctx.lineWidth = e.width ?? 1;
+        ctx.strokeRect(x, groundY - h, w, h);
+        ctx.restore();
+    }
+
+    _drawCrowd(ctx, theme, W, G) {
+        const c = theme.crowd ?? {};
+        ctx.save();
+        ctx.globalAlpha = c.alpha ?? 0.18;
+        ctx.fillStyle = c.color ?? '#4a1d6e';
+        const spacing = c.spacing ?? 18;
+        const radius = c.radius ?? 9;
+        for (let i = 0; i < W; i += spacing) {
+            const h = 20 + Math.sin(i * 0.3) * 8 + Math.sin(i * 0.7 + 1) * 5;
+            ctx.beginPath();
+            ctx.arc(i + 9, G - h, radius, Math.PI, 0);
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    _drawGrid(ctx, theme, W, H, G) {
+        const g = theme.grid ?? {};
+        ctx.save();
+        ctx.globalAlpha = g.alpha ?? 0.12;
+        ctx.strokeStyle = g.color ?? '#c084fc';
+        ctx.lineWidth = g.width ?? 1;
+
+        const rows = g.rows ?? 5;
         for (let r = 0; r <= rows; r++) {
             const t = r / rows;
             const y = G + t * (H - G);
@@ -102,7 +171,8 @@ export default class Renderer {
             ctx.lineTo(xR, y);
             ctx.stroke();
         }
-        const cols = 7;
+
+        const cols = g.cols ?? 7;
         for (let c = 0; c <= cols; c++) {
             const t = c / cols;
             ctx.beginPath();
@@ -111,42 +181,13 @@ export default class Renderer {
             ctx.stroke();
         }
         ctx.restore();
-
-        // Black footer behind sprite overflow
-        ctx.fillStyle = '#0d0810';
-        ctx.fillRect(0, G + 1, 120, H - G - 1);
-        ctx.fillRect(W - 145, G + 1, 145, H - G - 1);
     }
 
-    _drawPillar(ctx, x, groundY) {
-        const h = 160;
-        ctx.save();
-        const grad = ctx.createLinearGradient(x, groundY - h, x + 25, groundY - h);
-        grad.addColorStop(0, '#6b21a8');
-        grad.addColorStop(1, '#1e0a2e');
-        ctx.fillStyle = grad;
-        ctx.fillRect(x, groundY - h, 25, h);
-
-        // Neon edge
-        ctx.shadowColor = '#a855f7';
-        ctx.shadowBlur = 10;
-        ctx.strokeStyle = '#7c3aed';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x, groundY - h, 25, h);
-        ctx.restore();
-    }
-
-    _drawCrowd(ctx, W, G) {
-        ctx.save();
-        ctx.globalAlpha = 0.18;
-        // Simple crowd of silhouette bumps
-        ctx.fillStyle = '#4a1d6e';
-        for (let i = 0; i < W; i += 18) {
-            const h = 20 + Math.sin(i * 0.3) * 8 + Math.sin(i * 0.7 + 1) * 5;
-            ctx.beginPath();
-            ctx.arc(i + 9, G - h, 9, Math.PI, 0);
-            ctx.fill();
-        }
-        ctx.restore();
+    _drawFooter(ctx, theme, W, H, G) {
+        const f = theme.footer ?? {};
+        ctx.fillStyle = f.color ?? '#0d0810';
+        const off = f.offsetY ?? 1;
+        ctx.fillRect(0, G + off, f.leftWidth ?? 120, H - G - off);
+        ctx.fillRect(W - (f.rightWidth ?? 145), G + off, f.rightWidth ?? 145, H - G - off);
     }
 }

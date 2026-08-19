@@ -136,6 +136,24 @@ export default class Fighter {
     }
 
     /**
+     * Start the attack bound to an input action via the character's `controls`
+     * map. New fight styles are added purely in config: append an attack to
+     * `attacks` and point an action at it (e.g. `controls.lightPunch: 'uppercut'`).
+     * @param {string} action  — input action name ('lightPunch', 'heavyPunch'…)
+     * @returns {object|null} the chosen attack, or null when none is mapped
+     */
+    startAttackForAction(action) {
+        const mapped = this._character.controls?.[action] ?? action;
+        const atk = this.attacks.find(a => a.name === mapped);
+        if (!atk) {
+            console.warn(`[Fighter] No attack "${mapped}" for action "${action}"`);
+            return null;
+        }
+        this.startAttack(atk.name);
+        return atk;
+    }
+
+    /**
      * Advance the fighter by one frame.
      * `input` is null for the AI-controlled fighter (the AIController drives
      * the state machine directly via enterState / startAttack).
@@ -179,7 +197,7 @@ export default class Fighter {
             knockbackY: atk.knockbackY * dmgMult,
             durationFrames: atk.active,
         });
-        this._bus?.emit('sfx', { sound: 'punch' });
+        this._bus?.emit('sfx', { sound: 'punch', actor: this.id });
     }
 
     //  Physics 
@@ -259,7 +277,7 @@ export default class Fighter {
                 this.width,
                 this.height,
                 this.facingRight,
-                70,
+                undefined,
                 (this.flashTimer / 10) * 0.65,
             );
         }

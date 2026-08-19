@@ -13,6 +13,11 @@
  * Attack fields:
  *   name, startup, active, recovery, hitFrame, damage, knockbackX/Y,
  *   offsetX/Y, width/height (hitbox), animKey, cooldownExtra, allowAI
+ * AI hints (all optional):
+ *   aiPriority   — lower = more likely while pressuring (default Infinity;
+ *                  heavy/sweep set finite thresholds like the classic tiers)
+ *   aiPunish     — flagged attack is preferred for whiff punishes
+ *   aiAirOnly    — excluded from ground pressure selection (e.g. air attacks)
  */
 
 /** Base sprite pack shared by all characters by default. */
@@ -124,6 +129,8 @@ export const BASE_ATTACKS = Object.freeze([
         width:         50,
         height:        30,
         cooldownExtra: 8,
+        aiPriority:    0.25,
+        aiPunish:      true,
     },
     {
         name:         'sweepKick',
@@ -140,6 +147,7 @@ export const BASE_ATTACKS = Object.freeze([
         width:         55,
         height:        20,
         cooldownExtra: 6,
+        aiPriority:    0.4,
     },
     {
         name:         'airPunch',
@@ -156,6 +164,7 @@ export const BASE_ATTACKS = Object.freeze([
         width:         30,
         height:        20,
         cooldownExtra: 5,
+        aiAirOnly:     true,
     },
 ]);
 

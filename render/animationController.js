@@ -51,9 +51,10 @@ export class AnimationController {
      * @param {number} width
      * @param {number} height
      * @param {boolean} [facingRight=true]
-     * @param {number} [drawOffsetY=70]  — vertical nudge to align sprite in bounding box
+     * @param {number} [drawOffsetY]  — vertical nudge; falls back to the
+     *                                  sprite config's drawOffsetY, then 70
      */
-    draw(ctx, x, y, width, height, facingRight = true, drawOffsetY = 70) {
+    draw(ctx, x, y, width, height, facingRight = true, drawOffsetY) {
         const anim = this._config[this.current];
         if (!anim) {
             ctx.fillStyle = '#888';
@@ -70,7 +71,8 @@ export class AnimationController {
             return;
         }
 
-        const drawY = y + drawOffsetY;
+        const offsetY = drawOffsetY ?? anim.drawOffsetY ?? 70;
+        const drawY = y + offsetY;
 
         if (facingRight) {
             ctx.drawImage(img, x, drawY, width, height);
@@ -91,10 +93,10 @@ export class AnimationController {
      * @param {number} width
      * @param {number} height
      * @param {boolean} [facingRight=true]
-     * @param {number} [drawOffsetY=70]
+     * @param {number} [drawOffsetY=0]  — vertical nudge; falls back to the sprite config
      * @param {number} [alpha=0.65]  — flash opacity (caller fades it over time)
      */
-    drawFlash(ctx, x, y, width, height, facingRight = true, drawOffsetY = 70, alpha = 0.65) {
+    drawFlash(ctx, x, y, width, height, facingRight = true, drawOffsetY, alpha = 0.65) {
         ctx.save();
         ctx.globalAlpha = alpha;
         try {

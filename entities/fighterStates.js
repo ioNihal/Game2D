@@ -37,13 +37,13 @@ export const FIGHTER_STATES = {
             }
             if (input.justPressed('jump') && ctx.onGround) return 'jump_rise';
             if (input.justPressed('lightPunch') && ctx.attackCooldown === 0) {
-                return ctx.startAttack('lightPunch');
+                return ctx.startAttackForAction('lightPunch');
             }
             if (input.justPressed('heavyPunch') && ctx.attackCooldown === 0) {
-                return ctx.startAttack('heavyPunch');
+                return ctx.startAttackForAction('heavyPunch');
             }
             if (input.justPressed('sweepKick') && ctx.attackCooldown === 0) {
-                return ctx.startAttack('sweepKick');
+                return ctx.startAttackForAction('sweepKick');
             }
         },
     },
@@ -68,10 +68,10 @@ export const FIGHTER_STATES = {
             }
             if (input.justPressed('jump') && ctx.onGround) return 'jump_rise';
             if (input.justPressed('lightPunch') && ctx.attackCooldown === 0) {
-                return ctx.startAttack('lightPunch');
+                return ctx.startAttackForAction('lightPunch');
             }
             if (input.justPressed('heavyPunch') && ctx.attackCooldown === 0) {
-                return ctx.startAttack('heavyPunch');
+                return ctx.startAttackForAction('heavyPunch');
             }
         },
     },
@@ -81,12 +81,12 @@ export const FIGHTER_STATES = {
             ctx.stateTimer = 0;
             ctx.vy = ctx.getJumpVelocity();
             ctx.onGround = false;
-            ctx._bus?.emit('sfx', { sound: 'jump' });
+            ctx._bus?.emit('sfx', { sound: 'jump', actor: ctx.id });
         },
         update(ctx, input) {
             if (ctx.vy >= 0) return 'jump_fall';
             if (input && input.justPressed('lightPunch') && ctx.attackCooldown === 0) {
-                return ctx.startAttack('airPunch');
+                return ctx.startAttackForAction('airPunch');
             }
         },
     },
@@ -103,7 +103,7 @@ export const FIGHTER_STATES = {
                 ctx.facingRight = true;
             }
             if (input.justPressed('lightPunch') && ctx.attackCooldown === 0) {
-                return ctx.startAttack('airPunch');
+                return ctx.startAttackForAction('airPunch');
             }
         },
     },

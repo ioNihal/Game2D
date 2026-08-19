@@ -140,6 +140,11 @@ export default class AudioManager {
         this._currentMusicSource = null;
     }
 
+    /** True when a buffer for `key` is loaded (used for SFX fallback resolution). */
+    has(key) {
+        return this._buffers.has(key);
+    }
+
     //  Volume control 
 
     setMasterVolume(val) { this._masterGain.gain.value = Math.max(0, Math.min(1, val)); }

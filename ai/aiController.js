@@ -291,7 +291,8 @@ export default class AIController {
             this._releaseAll();
             return;
         }
-        const punishMove = this._aiAttacks().find(a => a.name === 'heavyPunch')
+        const punishMove = this._aiAttacks().find(a => a.aiPunish)
+            ?? this._aiAttacks().find(a => a.name === 'heavyPunch')
             ?? this._aiAttacks()[0];
         if (punishMove) {
             this._releaseAll();
@@ -307,19 +308,20 @@ export default class AIController {
 
     _choosePressureAttack(absDx) {
         const t = this._tuning;
-        const viable = this._aiAttacks();
-        if (viable.length === 0) return null;
 
-        const isOpponentGrounded = this.opponent.onGround;
+        // Pool = AI-usable attacks, excluding strictly-air moves.
+        const pool = this._aiAttacks()
+            .filter(a => !a.aiAirOnly)
+            .sort((a, b) => (a.aiPriority ?? Infinity) - (b.aiPriority ?? Infinity));
+        if (pool.length === 0) return null;
+
+        // Pick by absolute thresholds (old heavy/sweep/light tiers); the
+        // first attack whose aiPriority exceeds the roll wins. Default Infinity
+        // entries are the catch-all filler.
         const roll = Math.random() * t.aggressionMult;
-
-        const heavy = viable.find(a => a.name === 'heavyPunch');
-        if (heavy && roll < 0.25 && isOpponentGrounded) return 'heavyPunch';
-
-        const sweep = viable.find(a => a.name === 'sweepKick');
-        if (sweep && roll < 0.4 && isOpponentGrounded) return 'sweepKick';
-
-        const light = viable.find(a => a.name === 'lightPunch');
-        return light ? 'lightPunch' : viable[0]?.name ?? null;
+        for (const a of pool) {
+            if (roll < (a.aiPriority ?? Infinity)) return a.name;
+        }
+        return pool[pool.length - 1].name;
     }
 }
