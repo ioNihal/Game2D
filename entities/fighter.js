@@ -1,5 +1,4 @@
 import { CONFIG } from '../configs/config.js';
-import { AnimationController } from '../render/animationController.js';
 import Hitbox from './hitbox.js';
 import { createStateMachine } from '../core/stateMachine.js';
 import { FIGHTER_STATES } from './fighterStates.js';
@@ -11,7 +10,8 @@ import { FIGHTER_STATES } from './fighterStates.js';
  *
  * The fighter owns no rendering concerns beyond drawing its own sprite, and it
  * never touches audio or input directly — sound is emitted as `sfx` events on
- * the optional EventBus (`bus`).
+ * the optional EventBus (`bus`). Its AnimationController is injected (built by
+ * CharacterFactory) so the fighter stays ignorant of asset keys.
  */
 export default class Fighter {
     /**
@@ -19,11 +19,11 @@ export default class Fighter {
      *   character: object,
      *   x: number,
      *   y: number,
-     *   assetLoader: import('../utils/assetLoader.js').default,
+     *   animController?: import('../render/animationController.js').AnimationController|null,
      *   bus?: import('../core/eventBus.js').default,
      * }} cfg
      */
-    constructor({ character, x, y, assetLoader, bus }) {
+    constructor({ character, x, y, animController, bus }) {
         this.id = character.id;
         this.displayName = character.displayName;
         this._character = character;
@@ -66,28 +66,8 @@ export default class Fighter {
         this.stateTimer = 0;
         this._fsm = createStateMachine(FIGHTER_STATES, 'idle', this);
 
-        // Animation
-        this._animController = (assetLoader && character.sprites)
-            ? new AnimationController(this._buildAnimationsConfig(), assetLoader)
-            : this._fallbackAnimController();
-    }
-
-    /** Build the AnimationController config (image keys) from this character's sprites. */
-    _buildAnimationsConfig() {
-        const result = {};
-        for (const [animKey, cfg] of Object.entries(this._character.sprites)) {
-            const imageKeys = [];
-            for (let i = 1; i <= cfg.frameCount; i++) {
-                imageKeys.push(`${this.id}_${animKey}${i}`);
-            }
-            result[animKey] = {
-                frameCount: cfg.frameCount,
-                frameDuration: cfg.frameDuration,
-                loop: cfg.loop,
-                imageKeys,
-            };
-        }
-        return result;
+        // Animation (injected; null → no-op fallback used when assets unavailable)
+        this._animController = animController ?? this._fallbackAnimController();
     }
 
     /** A no-op animation controller used when assets are unavailable. */
@@ -97,6 +77,10 @@ export default class Fighter {
             setAnimation: () => { },
             update: () => { },
             draw: (ctx, x, y, w, h) => {
+                ctx.fillStyle = '#888';
+                ctx.fillRect(x, y, w, h);
+            },
+            drawFlash: (ctx, x, y, w, h) => {
                 ctx.fillStyle = '#888';
                 ctx.fillRect(x, y, w, h);
             },

@@ -29,4 +29,5 @@ export const CONFIG = Object.freeze({
     // Rounds
     roundsToWin:  2,         // first to this many round wins takes the match
     roundIntroMs: 1500,      // ms before "FIGHT!" fades and combat begins
+    koDelayMs:    1500,      // ms a KO'd fighter lies before the round settles
 });
