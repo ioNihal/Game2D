@@ -1,6 +1,5 @@
 import InputHandler from '../input/inputHandler.js';
 import AssetLoader from '../utils/assetLoader.js';
-import AudioManager from '../utils/audioManager.js';
 import EventBus from '../core/eventBus.js';
 import GameLoop from './gameLoop.js';
 import CombatSystem from '../systems/combat.js';
@@ -10,55 +9,61 @@ import { ASSET_MANIFEST } from '../configs/assets.js';
 import { buildFighter } from '../entities/characterFactory.js';
 import { PLAYER_CHARACTER } from '../configs/characters/player.js';
 import { ENEMY_CHARACTER } from '../configs/characters/enemy.js';
-import AIController from '../controllers/ai.js';
-import UIManager from '../ui.js';
+import AIController from '../ai/aiController.js';
 import HUD from '../render/hud.js';
 import Overlays from '../render/overlays.js';
 import FloatingText from '../render/floatingText.js';
-
-/** Maps UI touch-button labels to semantic actions (UIManager refactors in Phase 5). */
-const VIRTUAL_BUTTONS = {
-    left: 'moveLeft',
-    right: 'moveRight',
-    jump: 'jump',
-    attack: 'lightPunch',
-    heavy: 'heavyPunch',
-    sweep: 'sweepKick',
-    block: 'block',
-};
 
 /**
  * Game — orchestration facade.
  *
  * Composes systems (GameLoop, CombatSystem, MatchSystem, EventBus), entities
- * (fighters built once via CharacterFactory and reused across rounds), the
- * render modules, and the UIManager. Gameplay logic lives in the systems;
- * this class only wires them together and applies visual/audio side-effects
- * in response to their events.
+ * (fighters built once via CharacterFactory and reused across rounds), and the
+ * render modules. Gameplay logic lives in the systems; this class only wires
+ * them together and applies visual/audio side-effects in response to their
+ * events.
+ *
+ * Dependencies are injected via constructor (no UIManager construction here):
+ *   renderer, bus, audio, input, settingsStore
  */
 export default class Game {
     /**
-     * @param {{ renderer: import('../render/renderer.js').default }} deps
+     * @param {{
+     *   renderer: import('../render/renderer.js').default,
+     *   bus: EventBus,
+     *   audio: import('../utils/audioManager.js').default,
+     *   input: InputHandler,
+     *   settingsStore: import('../ui/settingsStore.js').default,
+     * }} deps
      */
-    constructor({ renderer }) {
+    constructor({ renderer, bus, audio, input, settingsStore }) {
         this._renderer = renderer;
+        this._bus = bus;
+        this._audio = audio;
+        this._input = input;
+        this._settingsStore = settingsStore;
         this._hud = new HUD();
         this._overlays = new Overlays();
 
-        this._input = new InputHandler();
         this._assetLoader = new AssetLoader();
-        this._audioManager = new AudioManager();
-        this._ui = new UIManager(this);
 
-        // Event bus: systems emit, Game applies side-effects
-        this._bus = new EventBus();
+        // Combat + Match systems
         this._combat = new CombatSystem({ bus: this._bus });
         this._match = new MatchSystem({ bus: this._bus });
 
-        this._bus.on('sfx', ({ sound }) => this._audioManager.playSFX(sound));
+        // System event handlers
+        this._bus.on('sfx', ({ sound }) => this._audio.playSFX(sound));
         this._bus.on('combat:hit', (payload) => this._onCombatHit(payload));
         this._bus.on('match:roundStart', () => this._onRoundStart());
         this._bus.on('match:roundEnd', () => this._onRoundEnd());
+
+        // Debug killswitch (only fires when CONFIG.debug is true)
+        this._bus.on('debug:killswitch', () => {
+            if (this._enemy && this._enemy.state !== 'ko') {
+                this._enemy.health = 0;
+                this._enemy.enterState('ko');
+            }
+        });
 
         // Game flags
         this._running = false;
@@ -78,7 +83,7 @@ export default class Game {
         // Combo tracking
         this._comboCount = 0;
         this._comboTimer = 0;
-        this._comboOwner = null;  // 'player' | 'enemy'
+        this._comboOwner = null;
 
         // Fixed-timestep loop: 60 Hz logic, rAF render
         this._loop = new GameLoop({
@@ -104,7 +109,8 @@ export default class Game {
         this._combat.setFighters([this._player, this._enemy]);
 
         this._enemyAI = new AIController(this._enemy, this._player, {
-            difficulty: this._ui.getDifficulty(),
+            difficulty: this._settingsStore.difficulty,
+            characterConfig: ENEMY_CHARACTER,
         });
 
         this._preloadAssets();
@@ -120,7 +126,7 @@ export default class Game {
     }
 
     async _preloadAudio() {
-        await this._audioManager.loadAudioList(ASSET_MANIFEST.audio).catch(err =>
+        await this._audio.loadAudioList(ASSET_MANIFEST.audio).catch(err =>
             console.error('[Game] Audio load error:', err)
         );
     }
@@ -133,19 +139,27 @@ export default class Game {
         this._paused = false;
         this._match.startMatch();
         this._loop.start();
+        this._bus.emit('game:started');
     }
 
     stopGame() {
         this._running = false;
         this._paused = false;
         this._loop.stop();
+        this._bus.emit('game:stopped');
     }
 
-    pauseGame() { if (this._running) this._paused = true; }
+    pauseGame() {
+        if (this._running && !this._paused) {
+            this._paused = true;
+            this._bus.emit('game:paused');
+        }
+    }
     resumeGame() {
         if (this._running && this._paused) {
             this._paused = false;
             this._loop.resetTiming();
+            this._bus.emit('game:resumed');
         }
     }
 
@@ -157,27 +171,10 @@ export default class Game {
         this._match.nextRound();
     }
 
-    //  Volume / difficulty pass-throughs
-
-    setMasterVolume(v) { this._audioManager.setMasterVolume(v); }
-    setMusicVolume(v) { this._audioManager.setMusicVolume(v); }
-    setSFXVolume(v) { this._audioManager.setSFXVolume(v); }
-    /** Stops the fight BGM — called by UIManager when returning to the main menu. */
-    stopMusic() { this._audioManager.stopMusic(); }
+    //  Difficulty (reactive to settings changes)
 
     setDifficulty(val) {
         this._enemyAI?.setDifficulty(val);
-    }
-
-    //  Mobile virtual input pass-through
-
-    onVirtualButtonDown(label) {
-        const action = VIRTUAL_BUTTONS[label];
-        if (action) this._input.setVirtualDown(action);
-    }
-    onVirtualButtonUp(label) {
-        const action = VIRTUAL_BUTTONS[label];
-        if (action) this._input.setVirtualUp(action);
     }
 
     //  Fixed-timestep logic (one step = 1/60 s)
@@ -199,9 +196,12 @@ export default class Game {
     }
 
     _updateFighters() {
+        // Player reads physical keyboard + virtual touch via InputHandler
         this._player.update(this._input);
+
+        // AI writes to its own VirtualInput, then fighter reads it
         this._enemyAI.update();
-        this._enemy.update();
+        this._enemy.update(this._enemyAI.getInput());
 
         // Collect + resolve hitboxes (emits combat:hit events)
         for (const fighter of [this._player, this._enemy]) {
@@ -230,7 +230,7 @@ export default class Game {
         // Reuse fighters: reset to their start positions + full health
         this._player.reset(PLAYER_CHARACTER.start.x);
         this._enemy.reset(ENEMY_CHARACTER.start.x);
-        this._enemyAI.reset(); // seed _prevOpponentHealth to full HP before round starts
+        this._enemyAI.reset();
         this._combat.clear();
 
         // Ghost HP bars
@@ -245,22 +245,18 @@ export default class Game {
         this._shakeX = 0;
         this._shakeY = 0;
 
-        this._audioManager.resumeContext().then(() =>
-            this._audioManager.playMusic('bgm_fight', { volume: 0.5, loop: true })
+        this._audio.resumeContext().then(() =>
+            this._audio.playMusic('bgm_fight', { volume: 0.5, loop: true })
         );
     }
 
     _onRoundEnd() {
-        this._audioManager.stopMusic();
-        this._ui.showGameOverOverlay();
+        this._audio.stopMusic();
+        this._bus.emit('game:roundEnd');
     }
 
     //  Combat event side-effects (visual + audio)
 
-    /**
-     * Handles a resolved hit: floating damage number, screen shake, combo
-     * tracking, and the corresponding sound effect.
-     */
     _onCombatHit({ attacker, damage, blocked, ko, x, y, big }) {
         if (damage > 0) {
             this._floatingTexts.push(new FloatingText(
@@ -269,10 +265,8 @@ export default class Game {
                 y
             ));
 
-            // Screen shake proportional to damage
             this._triggerShake(big ? CONFIG.shakeMagnitude * 1.5 : CONFIG.shakeMagnitude);
 
-            // Combo tracking
             const who = (attacker === this._player) ? 'player' : 'enemy';
             if (this._comboOwner === who) {
                 this._comboCount++;
@@ -280,12 +274,12 @@ export default class Game {
                 this._comboCount = 1;
                 this._comboOwner = who;
             }
-            this._comboTimer = 90; // reset window
+            this._comboTimer = 90;
         }
 
-        if (blocked) this._audioManager.playSFX('block');
-        else if (ko) this._audioManager.playSFX('ko');
-        else this._audioManager.playSFX('hit');
+        if (blocked) this._audio.playSFX('block');
+        else if (ko) this._audio.playSFX('ko');
+        else this._audio.playSFX('hit');
     }
 
     //  Visual systems
@@ -346,7 +340,7 @@ export default class Game {
         // Floating texts
         for (const ft of this._floatingTexts) ft.draw(ctx);
 
-        this._renderer.endWorld(); // end shake transform
+        this._renderer.endWorld();
 
         // HUD (not shaken)
         if (this._player && this._enemy) {
@@ -380,4 +374,9 @@ export default class Game {
         // Combo display
         if (this._comboCount >= 2 && this._comboTimer > 0) this._overlays.drawCombo(ctx, this._comboCount);
     }
+
+    //  Getters for debug integration
+
+    getPlayer() { return this._player; }
+    getEnemy() { return this._enemy; }
 }

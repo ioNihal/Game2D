@@ -1,5 +1,7 @@
 /** Central game constants. Import everywhere instead of magic numbers. */
 export const CONFIG = Object.freeze({
+    // Debug
+    debug: false,
     // Canvas
     canvasWidth:  800,
     canvasHeight: 450,

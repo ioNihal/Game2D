@@ -28,9 +28,6 @@ export const FIGHTER_STATES = {
             ctx.vx = 0;
             if (!input) return;
 
-            if (input.justPressed('killswitch') && ctx.attackCooldown === 0) {
-                return ctx.startAttack('killswitch');
-            }
             if (input.isDown('block') && ctx.onGround) return 'block';
             if (input.isDown('moveLeft')) {
                 ctx.facingRight = false;
@@ -120,8 +117,6 @@ export const FIGHTER_STATES = {
         },
         update(ctx, input) {
             ctx.vx = 0;
-            // AI holds the block for aiBlockTimer frames; player holds while block is held
-            if (ctx.aiBlockTimer > 0) return;
             if (input && !input.isDown('block')) {
                 if (input.isDown('moveLeft')) {
                     ctx.facingRight = false;

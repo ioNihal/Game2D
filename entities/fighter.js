@@ -47,7 +47,6 @@ export default class Fighter {
         this.stunTimer = 0;
         this.attackCooldown = 0;
         this.blockHitTimer = 0;
-        this.aiBlockTimer = 0;
 
         // Current attack being executed
         this.currentAttack = null;
@@ -135,7 +134,6 @@ export default class Fighter {
         if (this.attackCooldown > 0) this.attackCooldown--;
         if (this.blockHitTimer > 0) this.blockHitTimer--;
         if (this.flashTimer > 0) this.flashTimer--;
-        if (this.aiBlockTimer > 0) this.aiBlockTimer--;
     }
 
     //  Attack 
@@ -283,7 +281,6 @@ export default class Fighter {
         this.stunTimer = 0;
         this.attackCooldown = 0;
         this.blockHitTimer = 0;
-        this.aiBlockTimer = 0;
         this.flashTimer = 0;
         this.currentAttack = null;
         this.pendingHitbox = null;

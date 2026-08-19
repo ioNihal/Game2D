@@ -21,9 +21,6 @@ export const KEY_TO_ACTION = Object.freeze({
 
     // Defense
     KeyK:      'block',
-
-    // Debug
-    KeyL:      'killswitch',
 });
 
 /** All action names, derived so it can't drift from the map above. */

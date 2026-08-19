@@ -157,24 +157,6 @@ export const BASE_ATTACKS = Object.freeze([
         height:        20,
         cooldownExtra: 5,
     },
-    {
-        // Developer cheat — full-screen one-hit KO, never given to AI
-        name:         'killswitch',
-        startup:       6,
-        active:        5,
-        recovery:     20,
-        hitFrame:      2,
-        damage:       100,
-        knockbackX:   12,
-        knockbackY:   -8,
-        animKey:      'lightPunch',
-        offsetX:      135,
-        offsetY:      160,
-        width:        320,
-        height:       100,
-        cooldownExtra: 10,
-        allowAI:      false,
-    },
 ]);
 
 /** Default physical dimensions shared by all characters by default. */

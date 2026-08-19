@@ -26,6 +26,8 @@ function buildImageManifest() {
 /** Shared audio assets (both fighters currently use the same sounds). */
 const AUDIO = Object.freeze([
     { key: 'bgm_fight', urls: ['assets/sfx/bgm/bgm_fight.mp3', 'assets/sfx/bgm/bgm_fight.ogg'] },
+    { key: 'bgm_menu',  urls: ['assets/main.mp3'] },
+    { key: 'hover',     urls: ['assets/hover.mp3'] },
     { key: 'jump', urls: ['assets/sfx/jump/sfx_jump.mp3', 'assets/sfx/jump/sfx_jump.ogg'] },
     { key: 'punch', urls: ['assets/sfx/punch/sfx_punch.mp3', 'assets/sfx/punch/sfx_punch.ogg'] },
     { key: 'hit', urls: ['assets/sfx/hit/sfx_hit.mp3', 'assets/sfx/hit/sfx_hit.ogg'] },

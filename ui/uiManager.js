@@ -1,20 +1,26 @@
-import SettingsStore from './ui/settingsStore.js';
+import SettingsStore from './settingsStore.js';
 
 /**
- * UIManager — manages all HTML overlay screens, settings persistence,
- * mobile controls, and button sound effects.
+ * UIManager — manages all HTML overlay screens and settings UI.
  *
- * Works in concert with Game (passed as a reference) but does NOT
- * reach into game internals beyond the documented public API:
- *   game.startGame()   game.stopGame()    game.rematch()
- *   game.pauseGame()   game.resumeGame()  game.isRunning()   game.isPaused()
- *   game.setMasterVolume() / setMusicVolume() / setSFXVolume()
- *   game.setDifficulty()
- *   game.onVirtualButtonDown() / onVirtualButtonUp()
+ * Communicates with Game exclusively through EventBus events:
+ *   Game emits → game:started, game:stopped, game:paused, game:resumed, game:roundEnd
+ *   UIManager emits → ui:startGame, ui:pauseGame, ui:resumeGame, ui:quitToMenu, ui:rematch
+ *
+ * Receives dependencies via constructor (no `window.game` global):
+ *   bus — EventBus
+ *   audio — AudioManager (for menu BGM / hover SFX)
+ *   input — InputHandler (not used directly; mobile controls go through MobileControls)
+ *   settingsStore — SettingsStore (single source of truth)
  */
 export default class UIManager {
-    constructor(game) {
-        this._game = game;
+    /**
+     * @param {{ bus: import('../core/eventBus.js').default, audio: import('../utils/audioManager.js').default, settingsStore: SettingsStore }} deps
+     */
+    constructor({ bus, audio, settingsStore }) {
+        this._bus = bus;
+        this._audio = audio;
+        this._settingsStore = settingsStore;
 
         //  Screen elements 
         this._menuScreen = document.getElementById('menuScreen');
@@ -51,20 +57,6 @@ export default class UIManager {
         this._rematchButton = document.getElementById('rematchButton');
         this._quitToMenuButton = document.getElementById('quitToMenuButton');
 
-        //  Mobile touch buttons 
-        this._btnLeft = document.getElementById('btnLeft');
-        this._btnRight = document.getElementById('btnRight');
-        this._btnJump = document.getElementById('btnJump');
-        this._btnAttack = document.getElementById('btnAttack');
-        this._btnHeavy = document.getElementById('btnHeavy');
-        this._btnSweep = document.getElementById('btnSweep');
-        this._btnBlock = document.getElementById('btnBlock');
-
-        //  SFX / BGM (outside AudioManager — for menu screens) 
-        this._hoverSfx = new Audio('./assets/hover.mp3');
-        this._splashBgm = new Audio('./assets/main.mp3');
-        this._splashBgm.loop = true;
-
         // Track first user gesture (required for audio autoplay)
         this._userInteracted = false;
 
@@ -72,12 +64,11 @@ export default class UIManager {
         this._settingsParent = null;
 
         // Settings — single source of truth, persisted + reactive
-        this._settingsStore = new SettingsStore();
-        this._settingsStore.onChange(() => this._applySettings());
+        this._settingsStore.onChange(() => this._applySettingsToAudio());
         this._populateFormFromSettings();
 
         this._bindEvents();
-        this._applySettings();
+        this._applySettingsToAudio();
         this._updateMobileControlsVisibility();
 
         window.addEventListener('resize', () => this._updateMobileControlsVisibility());
@@ -95,9 +86,8 @@ export default class UIManager {
         this._show(this._menuScreen);
         this._updateHUDVisibility();
         this._updateMobileControlsVisibility();
-        this._game.stopMusic();   // stop fight BGM when returning to menu
-        this._splashBgm.currentTime = 0;
-        this._splashBgm.play().catch(() => { });
+        this._audio.stopMusic();
+        this._audio.playMusic('bgm_menu', { volume: 0.4, loop: true });
     }
 
     showGameOverOverlay() {
@@ -114,8 +104,8 @@ export default class UIManager {
 
     _showSettings(parent) {
         this._settingsParent = parent;
-        if (parent === 'pause' && this._game.isRunning() && !this._game.isPaused()) {
-            this._game.pauseGame();
+        if (parent === 'pause') {
+            this._bus.emit('ui:pauseGame');
         }
         this._hideAllScreens();
         this._show(this._settingsScreen);
@@ -136,7 +126,9 @@ export default class UIManager {
             if (this._userInteracted) return;
             this._userInteracted = true;
             if (!this._menuScreen?.classList.contains('hidden')) {
-                this._splashBgm.play().catch(() => { });
+                this._audio.resumeContext().then(() =>
+                    this._audio.playMusic('bgm_menu', { volume: 0.4, loop: true })
+                );
             }
         }, { once: false });
 
@@ -144,30 +136,26 @@ export default class UIManager {
         document.querySelectorAll('button').forEach(btn => {
             btn.addEventListener('mouseenter', () => {
                 if (!this._userInteracted) return;
-                this._hoverSfx.currentTime = 0;
-                this._hoverSfx.play().catch(() => { });
+                this._audio.playSFX('hover');
             });
         });
 
         //  Main menu 
         this._startButton?.addEventListener('click', () => {
-            this._splashBgm.pause();
-            this._splashBgm.currentTime = 0;
+            this._audio.stopMusic();
             this._hideAllScreens();
-            this._game.startGame();
+            this._bus.emit('ui:startGame');
             this._updateHUDVisibility();
             this._updateMobileControlsVisibility();
         });
 
         this._settingsButton?.addEventListener('click', () => {
-            if (!this._game.isRunning()) this._showSettings('menu');
+            this._showSettings('menu');
         });
 
         this._instructionsButton?.addEventListener('click', () => {
-            if (!this._game.isRunning()) {
-                this._hideAllScreens();
-                this._show(this._instructionsScreen);
-            }
+            this._hideAllScreens();
+            this._show(this._instructionsScreen);
         });
 
         //  Settings 
@@ -196,43 +184,37 @@ export default class UIManager {
 
         //  Pause overlay 
         this._pauseButton?.addEventListener('click', () => {
-            if (this._game.isRunning() && !this._game.isPaused()) {
-                this._show(this._pauseOverlay);
-                this._game.pauseGame();
-                this._updateMobileControlsVisibility();
-            }
+            this._bus.emit('ui:pauseGame');
+            this._show(this._pauseOverlay);
+            this._updateMobileControlsVisibility();
         });
 
         this._resumeButton?.addEventListener('click', () => {
             this._hide(this._pauseOverlay);
-            this._game.resumeGame();
+            this._bus.emit('ui:resumeGame');
             this._updateMobileControlsVisibility();
         });
 
         this._pauseSettingsButton?.addEventListener('click', () => {
-            if (this._game.isRunning() && this._game.isPaused()) {
-                this._showSettings('pause');
-            }
+            this._showSettings('pause');
         });
 
         this._quitButton?.addEventListener('click', () => {
             this._hide(this._pauseOverlay);
-            this._game.stopGame();
-            this.showMainMenu();
+            this._bus.emit('ui:quitToMenu');
         });
 
         //  Game-over overlay 
         this._rematchButton?.addEventListener('click', () => {
             this.hideGameOverOverlay();
-            this._game.rematch();
+            this._bus.emit('ui:rematch');
             this._updateHUDVisibility();
             this._updateMobileControlsVisibility();
         });
 
         this._quitToMenuButton?.addEventListener('click', () => {
             this.hideGameOverOverlay();
-            this._game.stopGame();
-            this.showMainMenu();
+            this._bus.emit('ui:quitToMenu');
         });
 
         //  Keyboard shortcuts 
@@ -244,36 +226,37 @@ export default class UIManager {
             } else if (this._isVisible(this._instructionsScreen)) {
                 this._hideAllScreens();
                 this._show(this._menuScreen);
-            } else if (this._game.isRunning() && !this._game.isPaused()) {
+            } else if (this._pauseButton && !this._pauseButton.classList.contains('hidden')) {
+                // In-game: pause
+                this._bus.emit('ui:pauseGame');
                 this._show(this._pauseOverlay);
-                this._game.pauseGame();
                 this._updateMobileControlsVisibility();
-            } else if (this._game.isRunning() && this._game.isPaused() && this._isVisible(this._pauseOverlay)) {
+            } else if (this._isVisible(this._pauseOverlay)) {
                 this._hide(this._pauseOverlay);
-                this._game.resumeGame();
+                this._bus.emit('ui:resumeGame');
                 this._updateMobileControlsVisibility();
             }
         });
 
-        //  Mobile touch buttons 
-        this._bindTouchButton(this._btnLeft, 'left');
-        this._bindTouchButton(this._btnRight, 'right');
-        this._bindTouchButton(this._btnJump, 'jump');
-        this._bindTouchButton(this._btnAttack, 'attack');
-        this._bindTouchButton(this._btnHeavy, 'heavy');
-        this._bindTouchButton(this._btnSweep, 'sweep');
-        this._bindTouchButton(this._btnBlock, 'block');
-    }
-
-    _bindTouchButton(elem, action) {
-        if (!elem) return;
-        const down = () => this._game.onVirtualButtonDown(action);
-        const up = () => this._game.onVirtualButtonUp(action);
-        elem.addEventListener('touchstart', e => { e.preventDefault(); down(); }, { passive: false });
-        elem.addEventListener('touchend', e => { e.preventDefault(); up(); }, { passive: false });
-        elem.addEventListener('mousedown', e => { e.preventDefault(); down(); });
-        elem.addEventListener('mouseup', e => { e.preventDefault(); up(); });
-        elem.addEventListener('mouseleave', e => { e.preventDefault(); up(); });
+        //  Subscribe to game events 
+        this._bus.on('game:started', () => {
+            this._updateHUDVisibility();
+            this._updateMobileControlsVisibility();
+        });
+        this._bus.on('game:stopped', () => {
+            this.showMainMenu();
+        });
+        this._bus.on('game:paused', () => {
+            this._show(this._pauseOverlay);
+            this._updateMobileControlsVisibility();
+        });
+        this._bus.on('game:resumed', () => {
+            this._hide(this._pauseOverlay);
+            this._updateMobileControlsVisibility();
+        });
+        this._bus.on('game:roundEnd', () => {
+            this.showGameOverOverlay();
+        });
     }
 
     //  Settings — form ↔ store sync 
@@ -288,20 +271,10 @@ export default class UIManager {
         if (this._difficultySelect) this._difficultySelect.value = s.difficulty;
     }
 
-    /** Pushes stored settings into the audio pipeline + game. */
-    _applySettings() {
-        const s = this._settingsStore;
-        this._splashBgm.volume = s.masterVolume;
-        this._splashBgm.muted = s.muted;
-
-        if (s.muted) {
-            this._game.setMasterVolume(0);
-        } else {
-            this._game.setMasterVolume(s.masterVolume);
-            this._game.setMusicVolume(s.musicVolume);
-            this._game.setSFXVolume(s.sfxVolume);
-        }
-        this._game.setDifficulty(s.difficulty);
+    /** Pushes stored settings into AudioManager. */
+    _applySettingsToAudio() {
+        // AudioManager subscribes to SettingsStore directly — this is a no-op stub
+        // in case we need to push additional UI-level state later.
     }
 
     //  Visibility helpers 
@@ -321,8 +294,17 @@ export default class UIManager {
     }
 
     _updateHUDVisibility() {
-        const inGame = this._game.isRunning() && !this._game.isPaused() && !this._game.isGameOver();
-        inGame ? this._show(this._pauseButton) : this._hide(this._pauseButton);
+        // HUD visibility is now driven by game events; this shows/hides the pause button
+        const menuVisible = this._menuScreen && !this._menuScreen.classList.contains('hidden');
+        const settingsVisible = this._settingsScreen && !this._settingsScreen.classList.contains('hidden');
+        const instructionsVisible = this._instructionsScreen && !this._instructionsScreen.classList.contains('hidden');
+        const inOverlay = menuVisible || settingsVisible || instructionsVisible;
+
+        if (inOverlay || this._isVisible(this._gameOverOverlay) || this._isVisible(this._pauseOverlay)) {
+            this._hide(this._pauseButton);
+        } else {
+            this._show(this._pauseButton);
+        }
     }
 
     _updateMobileControlsVisibility() {
@@ -330,9 +312,7 @@ export default class UIManager {
         const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
         const wantShow = mode === 'on' || (mode === 'auto' && isTouch);
         const canShow = wantShow
-            && this._game.isRunning()
-            && !this._game.isPaused()
-            && !this._game.isGameOver()
+            && !this._isVisible(this._menuScreen)
             && !this._isVisible(this._settingsScreen)
             && !this._isVisible(this._instructionsScreen)
             && !this._isVisible(this._pauseOverlay)
