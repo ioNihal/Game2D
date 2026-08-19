@@ -32,6 +32,12 @@ export const ENEMY_CHARACTER = Object.freeze({
             mistakeChance: 0.35,
             aggressionMult: 0.6,
             comboWindow: 10,
+            stats: Object.freeze({
+                maxHealth: 0.8,
+                damage: 0.8,
+                walkSpeed: 0.9,
+                jump: 0.95,
+            }),
         }),
         normal: Object.freeze({
             preferredRange: 90,
@@ -42,6 +48,12 @@ export const ENEMY_CHARACTER = Object.freeze({
             mistakeChance: 0.18,
             aggressionMult: 1.0,
             comboWindow: 20,
+            stats: Object.freeze({
+                maxHealth: 1.0,
+                damage: 1.0,
+                walkSpeed: 1.0,
+                jump: 1.0,
+            }),
         }),
         hard: Object.freeze({
             preferredRange: 70,
@@ -52,6 +64,12 @@ export const ENEMY_CHARACTER = Object.freeze({
             mistakeChance: 0.05,
             aggressionMult: 1.4,
             comboWindow: 30,
+            stats: Object.freeze({
+                maxHealth: 1.25,
+                damage: 1.25,
+                walkSpeed: 1.15,
+                jump: 1.1,
+            }),
         }),
     }),
 });

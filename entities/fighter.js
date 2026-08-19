@@ -32,7 +32,9 @@ export default class Fighter {
         this.y = y;
         this.width = character.physics.width;
         this.height = character.physics.height;
-        this.maxHealth = character.physics.maxHealth;
+        this._baseMaxHealth = character.physics.maxHealth;
+        this._statMultipliers = { maxHealth: 1, damage: 1, walkSpeed: 1, jump: 1 };
+        this.maxHealth = this._baseMaxHealth * this._statMultipliers.maxHealth;
         this.health = this.maxHealth;
 
         this.attacks = character.attacks;
@@ -94,6 +96,32 @@ export default class Fighter {
     enterState(next) { this._fsm.setState(next); }
 
     /**
+     * Apply stat multipliers (per-difficulty enemy scaling). Unknown keys are
+     * ignored; the player keeps 1x by never calling this. Recomputes maxHealth
+     * and refreshes health to full.
+     * @param {object} mults
+     */
+    setStatMultipliers(mults = {}) {
+        for (const key of Object.keys(this._statMultipliers)) {
+            if (typeof mults[key] === 'number') {
+                this._statMultipliers[key] = mults[key];
+            }
+        }
+        this.maxHealth = Math.round(this._baseMaxHealth * this._statMultipliers.maxHealth);
+        this.health = this.maxHealth;
+    }
+
+    /** Scaled walk speed in px/frame. */
+    getWalkSpeed() {
+        return CONFIG.walkSpeed * this._statMultipliers.walkSpeed;
+    }
+
+    /** Scaled jump velocity in px/frame (negative = upward). */
+    getJumpVelocity() {
+        return CONFIG.jumpVelocity * this._statMultipliers.jump;
+    }
+
+    /**
      * Start an attack: stores it as currentAttack and enters startup.
      * @param {string} attackName
      */
@@ -139,15 +167,16 @@ export default class Fighter {
     //  Attack 
 
     _spawnHitbox(atk) {
+        const dmgMult = this._statMultipliers.damage;
         this.pendingHitbox = new Hitbox({
             owner: this,
             offsetX: atk.offsetX,
             offsetY: atk.offsetY,
             width: atk.width,
             height: atk.height,
-            damage: atk.damage,
-            knockbackX: atk.knockbackX,
-            knockbackY: atk.knockbackY,
+            damage: atk.damage * dmgMult,
+            knockbackX: atk.knockbackX * dmgMult,
+            knockbackY: atk.knockbackY * dmgMult,
             durationFrames: atk.active,
         });
         this._bus?.emit('sfx', { sound: 'punch' });

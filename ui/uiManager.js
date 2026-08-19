@@ -1,21 +1,24 @@
-import SettingsStore from './settingsStore.js';
-
 /**
  * UIManager — manages all HTML overlay screens and settings UI.
  *
  * Communicates with Game exclusively through EventBus events:
- *   Game emits → game:started, game:stopped, game:paused, game:resumed, game:roundEnd
- *   UIManager emits → ui:startGame, ui:pauseGame, ui:resumeGame, ui:quitToMenu, ui:rematch
+ *   Game emits → game:started, game:stopped, game:paused, game:resumed,
+ *                game:roundEnd, game:assetsReady
+ *   UIManager emits → ui:startGame, ui:pauseGame, ui:resumeGame,
+ *                     ui:quitToMenu, ui:rematch
  *
  * Receives dependencies via constructor (no `window.game` global):
  *   bus — EventBus
  *   audio — AudioManager (for menu BGM / hover SFX)
- *   input — InputHandler (not used directly; mobile controls go through MobileControls)
  *   settingsStore — SettingsStore (single source of truth)
  */
 export default class UIManager {
     /**
-     * @param {{ bus: import('../core/eventBus.js').default, audio: import('../utils/audioManager.js').default, settingsStore: SettingsStore }} deps
+     * @param {{
+     *   bus: import('../core/eventBus.js').default,
+     *   audio: import('../utils/audioManager.js').default,
+     *   settingsStore: import('./settingsStore.js').default,
+     * }} deps
      */
     constructor({ bus, audio, settingsStore }) {
         this._bus = bus;
@@ -64,22 +67,18 @@ export default class UIManager {
         this._settingsParent = null;
 
         // Settings — single source of truth, persisted + reactive
-        this._settingsStore.onChange(() => this._applySettingsToAudio());
         this._populateFormFromSettings();
 
+        // Loading gate — Start stays disabled until assets are ready
+        this._startButton.disabled = true;
+
         this._bindEvents();
-        this._applySettingsToAudio();
         this._updateMobileControlsVisibility();
 
         window.addEventListener('resize', () => this._updateMobileControlsVisibility());
     }
 
     //  Public API 
-
-    /** Returns the currently selected difficulty string. */
-    getDifficulty() {
-        return this._settingsStore.difficulty;
-    }
 
     showMainMenu() {
         this._hideAllScreens();
@@ -239,6 +238,9 @@ export default class UIManager {
         });
 
         //  Subscribe to game events 
+        this._bus.on('game:assetsReady', () => {
+            this._startButton.disabled = false;
+        });
         this._bus.on('game:started', () => {
             this._updateHUDVisibility();
             this._updateMobileControlsVisibility();
@@ -269,12 +271,6 @@ export default class UIManager {
         if (this._muteToggle) this._muteToggle.checked = s.muted;
         if (this._touchToggle) this._touchToggle.value = s.touchMode;
         if (this._difficultySelect) this._difficultySelect.value = s.difficulty;
-    }
-
-    /** Pushes stored settings into AudioManager. */
-    _applySettingsToAudio() {
-        // AudioManager subscribes to SettingsStore directly — this is a no-op stub
-        // in case we need to push additional UI-level state later.
     }
 
     //  Visibility helpers 

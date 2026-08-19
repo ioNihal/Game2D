@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description"
-        content="Stickman Fighter — a fast-paced, endless 1v1 stickman brawler with smart AI. Play on desktop or mobile." />
+        content="Stickman Fighter, a fast-paced 1v1 stickman brawler with smart AI. Play on desktop or mobile." />
     <title>Stickman Fighter</title>
     <link rel="stylesheet" href="./style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -76,10 +76,29 @@
         <div id="instructionsScreen" class="screen hidden">
             <h2>About</h2>
             <p>
-                Stickman Fighter is a fast-paced 1v1 brawler. Beat your opponent across
-                multiple rounds, first to <strong>2 round wins</strong> takes the match.
-                The AI will adapt: it defends, punishes whiffed attacks, and combos you.
+                Stickman Fighter is a fast-paced 1v1 brawler. Beat your opponent
+                across multiple rounds; the first to <strong>2 round wins</strong>
+                takes the match.
             </p>
+
+            <h2>How to Play</h2>
+            <div class="about-cards">
+                <div class="about-card">
+                    <span class="about-card-title">Win the Match</span>
+                    Defeat your opponent in 2 rounds before they do the same to
+                    you. Defend, punish whiffs, and combo for the win.
+                </div>
+                <div class="about-card">
+                    <span class="about-card-title">Difficulty Scales</span>
+                    Easy, Normal, and Hard tune the enemy AI and stats. Harder
+                    enemies hit harder, survive longer, and move faster.
+                </div>
+                <div class="about-card">
+                    <span class="about-card-title">Mix It Up</span>
+                    Light punches are fast, heavy punches hit hardest, and sweep
+                    kicks catch blocking opponents low. Block cuts damage by 85%.
+                </div>
+            </div>
 
             <h2>Controls</h2>
             <table class="controls-table">
@@ -89,43 +108,52 @@
                 </tr>
                 <tr>
                     <td>Move Left</td>
-                    <td>← / A</td>
+                    <td><kbd>←</kbd> <kbd>A</kbd></td>
                 </tr>
                 <tr>
                     <td>Move Right</td>
-                    <td>→ / D</td>
+                    <td><kbd>→</kbd> <kbd>D</kbd></td>
                 </tr>
                 <tr>
                     <td>Jump</td>
-                    <td>↑ / W</td>
+                    <td><kbd>↑</kbd> <kbd>W</kbd></td>
                 </tr>
                 <tr>
                     <td>Light Punch</td>
-                    <td>J</td>
+                    <td><kbd>J</kbd></td>
                 </tr>
                 <tr>
                     <td>Heavy Punch</td>
-                    <td>U</td>
+                    <td><kbd>U</kbd></td>
                 </tr>
                 <tr>
                     <td>Sweep Kick</td>
-                    <td>I</td>
+                    <td><kbd>I</kbd></td>
                 </tr>
                 <tr>
                     <td>Block</td>
-                    <td>K (hold)</td>
+                    <td><kbd>K</kbd> (hold)</td>
                 </tr>
                 <tr>
                     <td>Pause</td>
-                    <td>Esc</td>
+                    <td><kbd>Esc</kbd></td>
                 </tr>
             </table>
 
             <h2>Tips</h2>
-            <p>• Block reduces incoming damage by 85%.</p>
-            <p>• Heavy Punch deals the most damage, save it for when the enemy whiffs.</p>
-            <p>• Sweep Kick hits low, good for mix-ups.</p>
-            <p>• The AI will punish your recovery frames on hard difficulty.</p>
+            <ul class="tips-list">
+                <li>Block reduces incoming damage by 85%.</li>
+                <li>Heavy Punch deals the most damage, save it for when the enemy whiffs.</li>
+                <li>Sweep Kick hits low, good for mix-ups.</li>
+                <li>The AI punishes your recovery frames on hard difficulty.</li>
+            </ul>
+
+            <div class="author-card">
+                <span class="author-name">Nihal</span>
+                <a class="author-link" href="https://github.com/ioNihal/Game2D"
+                    target="_blank" rel="noopener noreferrer">github.com/ioNihal/Game2D</a>
+                <p class="author-line">A hobby project by Nihal, exploring game design and web tech.</p>
+            </div>
 
             <button id="instructionsBackButton">Back</button>
         </div>

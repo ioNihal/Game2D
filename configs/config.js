@@ -1,7 +1,7 @@
 /** Central game constants. Import everywhere instead of magic numbers. */
 export const CONFIG = Object.freeze({
-    // Debug
-    debug: false,
+    // Debug — enable with `?debug` URL param (killswitch + hitbox overlay)
+    debug: typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug'),
     // Canvas
     canvasWidth:  800,
     canvasHeight: 450,

@@ -1,5 +1,3 @@
-import { CONFIG } from '../configs/config.js';
-
 /**
  * FIGHTER_STATES — pure state definitions for `createStateMachine`.
  *
@@ -60,10 +58,10 @@ export const FIGHTER_STATES = {
                 return 'block';
             }
             if (input.isDown('moveLeft')) {
-                ctx.vx = -CONFIG.walkSpeed;
+                ctx.vx = -ctx.getWalkSpeed();
                 ctx.facingRight = false;
             } else if (input.isDown('moveRight')) {
-                ctx.vx = CONFIG.walkSpeed;
+                ctx.vx = ctx.getWalkSpeed();
                 ctx.facingRight = true;
             } else {
                 return 'idle';
@@ -81,7 +79,7 @@ export const FIGHTER_STATES = {
     jump_rise: {
         enter(ctx) {
             ctx.stateTimer = 0;
-            ctx.vy = CONFIG.jumpVelocity;
+            ctx.vy = ctx.getJumpVelocity();
             ctx.onGround = false;
             ctx._bus?.emit('sfx', { sound: 'jump' });
         },
@@ -98,10 +96,10 @@ export const FIGHTER_STATES = {
         update(ctx, input) {
             if (!input) return;
             if (input.isDown('moveLeft')) {
-                ctx.vx = -CONFIG.walkSpeed;
+                ctx.vx = -ctx.getWalkSpeed();
                 ctx.facingRight = false;
             } else if (input.isDown('moveRight')) {
-                ctx.vx = CONFIG.walkSpeed;
+                ctx.vx = ctx.getWalkSpeed();
                 ctx.facingRight = true;
             }
             if (input.justPressed('lightPunch') && ctx.attackCooldown === 0) {

@@ -28,50 +28,60 @@ ctx.font = '18px sans-serif';
 ctx.fillText('Loading…', CONFIG.canvasWidth / 2, CONFIG.canvasHeight / 2);
 
 //
-// Orientation guard
-//
-
-(function initOrientationGuard() {
-    const overlay = document.getElementById('rotateOverlay');
-    if (!overlay) return;
-
-    let pausedByRotate = false;
-
-    function check() {
-        const portrait = window.matchMedia('(orientation: portrait)').matches;
-        overlay.style.display = portrait ? 'flex' : 'none';
-
-        if (portrait && window.game?.isRunning() && !window.game.isPaused()) {
-            window.game.pauseGame();
-            pausedByRotate = true;
-        } else if (!portrait && pausedByRotate) {
-            window.game?.resumeGame();
-            pausedByRotate = false;
-        }
-    }
-
-    ['load', 'resize', 'orientationchange'].forEach(e => window.addEventListener(e, check));
-    document.addEventListener('DOMContentLoaded', check);
-})();
-
-//
-// Bootstrap — compose all dependencies, no `window.game` global
+// Bootstrap — single entry point. Compose everything here, no `window.game`
+// global; OrientationGuard closes over the game instance it needs.
 //
 
 window.addEventListener('load', () => {
+    // SettingsStore → Audio → Assets → Game → UI
     const bus = new EventBus();
     const input = new InputHandler();
     const settingsStore = new SettingsStore({ eventBus: bus });
     const audio = new AudioManager({ settingsStore });
 
-    const game = new Game({ renderer, bus, audio, input, settingsStore });
-    window.game = game;
+    const debug = CONFIG.debug ? new DebugControls({ bus }) : null;
+    const game = new Game({ renderer, bus, audio, input, settingsStore, debug });
+
+    // UI → Game wiring: UIManager emits ui:* events, Game reacts.
+    bus.on('ui:startGame', () => game.startGame());
+    bus.on('ui:pauseGame', () => game.pauseGame());
+    bus.on('ui:resumeGame', () => game.resumeGame());
+    bus.on('ui:quitToMenu', () => game.stopGame());
+    bus.on('ui:rematch', () => game.rematch());
 
     new UIManager({ bus, audio, settingsStore });
-    new MobileControls({ input, settingsStore });
+    new MobileControls({ input });
 
-    if (CONFIG.debug) {
-        const debug = new DebugControls({ input, bus });
-        window._debug = debug;
-    }
+    new OrientationGuard(game);
 });
+
+/**
+ * OrientationGuard — shows the "rotate device" overlay in portrait and pauses
+ * the running game. Closes over its Game reference; no global needed.
+ */
+class OrientationGuard {
+    constructor(game) {
+        this._game = game;
+        this._overlay = document.getElementById('rotateOverlay');
+        if (!this._overlay) return;
+        this._pausedByRotate = false;
+
+        ['load', 'resize', 'orientationchange'].forEach(e =>
+            window.addEventListener(e, () => this._check())
+        );
+        document.addEventListener('DOMContentLoaded', () => this._check());
+    }
+
+    _check() {
+        const portrait = window.matchMedia('(orientation: portrait)').matches;
+        this._overlay.style.display = portrait ? 'flex' : 'none';
+
+        if (portrait && this._game.isRunning() && !this._game.isPaused()) {
+            this._game.pauseGame();
+            this._pausedByRotate = true;
+        } else if (!portrait && this._pausedByRotate) {
+            this._game.resumeGame();
+            this._pausedByRotate = false;
+        }
+    }
+}

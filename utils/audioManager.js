@@ -1,5 +1,3 @@
-import SettingsStore from '../ui/settingsStore.js';
-
 /**
  * AudioManager — Web Audio API wrapper for music and SFX.
  * Supports master/music/sfx gain chains with mute and volume control.
@@ -7,7 +5,7 @@ import SettingsStore from '../ui/settingsStore.js';
  */
 export default class AudioManager {
     /**
-     * @param {{ settingsStore?: SettingsStore }} [opts]
+     * @param {{ settingsStore?: import('../ui/settingsStore.js').default }} [opts]
      */
     constructor({ settingsStore } = {}) {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;

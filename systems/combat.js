@@ -31,6 +31,11 @@ export default class CombatSystem {
         }
     }
 
+    /** All hitboxes currently resolving (for debug overlay). */
+    getActiveHitboxes() {
+        return [...this._hitboxes];
+    }
+
     /** Advance hitboxes and resolve collisions for one frame. */
     update() {
         for (let i = this._hitboxes.length - 1; i >= 0; i--) {

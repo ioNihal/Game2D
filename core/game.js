@@ -1,6 +1,4 @@
-import InputHandler from '../input/inputHandler.js';
 import AssetLoader from '../utils/assetLoader.js';
-import EventBus from '../core/eventBus.js';
 import GameLoop from './gameLoop.js';
 import CombatSystem from '../systems/combat.js';
 import MatchSystem from '../systems/match.js';
@@ -24,24 +22,26 @@ import FloatingText from '../render/floatingText.js';
  * events.
  *
  * Dependencies are injected via constructor (no UIManager construction here):
- *   renderer, bus, audio, input, settingsStore
+ *   renderer, bus, audio, input, settingsStore, debug (optional)
  */
 export default class Game {
     /**
      * @param {{
      *   renderer: import('../render/renderer.js').default,
-     *   bus: EventBus,
+     *   bus: import('../core/eventBus.js').default,
      *   audio: import('../utils/audioManager.js').default,
-     *   input: InputHandler,
+     *   input: import('../input/inputHandler.js').default,
      *   settingsStore: import('../ui/settingsStore.js').default,
+     *   debug?: import('../debug/debugControls.js').default,
      * }} deps
      */
-    constructor({ renderer, bus, audio, input, settingsStore }) {
+    constructor({ renderer, bus, audio, input, settingsStore, debug = null }) {
         this._renderer = renderer;
         this._bus = bus;
         this._audio = audio;
         this._input = input;
         this._settingsStore = settingsStore;
+        this._debug = debug;
         this._hud = new HUD();
         this._overlays = new Overlays();
 
@@ -112,15 +112,18 @@ export default class Game {
             difficulty: this._settingsStore.difficulty,
             characterConfig: ENEMY_CHARACTER,
         });
+        this.setDifficulty(this._settingsStore.difficulty);
 
-        this._preloadAssets();
-        this._preloadAudio();
+        // Difficulty is live-switchable: apply settings changes to the AI
+        this._settingsStore.onChange(s => this.setDifficulty(s.difficulty));
+
+        this._preloadAll();
     }
 
     //  Asset loading
 
     _preloadAssets() {
-        this._assetLoader.loadImages(ASSET_MANIFEST.images).catch(err =>
+        return this._assetLoader.loadImages(ASSET_MANIFEST.images).catch(err =>
             console.error('[Game] Asset load error:', err)
         );
     }
@@ -129,6 +132,16 @@ export default class Game {
         await this._audio.loadAudioList(ASSET_MANIFEST.audio).catch(err =>
             console.error('[Game] Audio load error:', err)
         );
+    }
+
+    /**
+     * Loads images + audio, then emits game:assetsReady so the UI can enable
+     * the Start button. Individual load failures are logged but don't block —
+     * fallback placeholders keep the game playable.
+     */
+    async _preloadAll() {
+        await Promise.all([this._preloadAssets(), this._preloadAudio()]);
+        this._bus.emit('game:assetsReady');
     }
 
     //  Public game state API
@@ -175,6 +188,9 @@ export default class Game {
 
     setDifficulty(val) {
         this._enemyAI?.setDifficulty(val);
+        // Enemy stats scale with difficulty; the player is never touched.
+        const stats = ENEMY_CHARACTER.ai?.[val]?.stats ?? {};
+        this._enemy?.setStatMultipliers(stats);
     }
 
     //  Fixed-timestep logic (one step = 1/60 s)
@@ -373,10 +389,8 @@ export default class Game {
 
         // Combo display
         if (this._comboCount >= 2 && this._comboTimer > 0) this._overlays.drawCombo(ctx, this._comboCount);
+
+        // Debug hitboxes (only when CONFIG.debug is active)
+        this._debug?.drawDebugHitboxes(ctx, this._player, this._enemy, this._combat.getActiveHitboxes());
     }
-
-    //  Getters for debug integration
-
-    getPlayer() { return this._player; }
-    getEnemy() { return this._enemy; }
 }

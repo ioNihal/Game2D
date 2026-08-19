@@ -1,20 +1,15 @@
-import InputHandler from '../input/inputHandler.js';
-
 /**
  * MobileControls — binds touch/mouse on mobile buttons directly to InputHandler.
  * No pass-through through Game; actions go straight to the input layer.
  */
 export default class MobileControls {
     /**
-     * @param {{ input: InputHandler, settingsStore: import('../ui/settingsStore.js').default }} deps
+     * @param {{ input: import('../input/inputHandler.js').default }} deps
      */
-    constructor({ input, settingsStore }) {
+    constructor({ input }) {
         this._input = input;
-        this._settingsStore = settingsStore;
 
-        /** @type {HTMLElement|null} */
-        this._container = document.getElementById('mobileControls');
-        if (!this._container) return;
+        if (!document.getElementById('mobileControls')) return;
 
         this._bindButton('btnLeft', 'moveLeft');
         this._bindButton('btnRight', 'moveRight');

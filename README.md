@@ -5,41 +5,55 @@
 [![GitHub Issues](https://img.shields.io/github/issues/ioNihal/Game2D)](https://github.com/ioNihal/Game2D/issues)
 [![MIT License](https://img.shields.io/github/license/ioNihal/Game2D)](LICENSE)
 
-A fast-paced, endless 1v1 stickman fighting game for web browsers. Responsive controls, simple AI, and mobile support. Built with vanilla JS, HTML5 Canvas, and CSS.
+A fast-paced, endless 1v1 stickman fighting game for web browsers. Responsive controls, smart AI, and mobile support. Built with vanilla JS (zero-build ES modules), HTML5 Canvas, and CSS.
 
 ## 🚀 Features
 
-- ⚔️ Endless 1v1 battles
-- 🤖 Adjustable AI difficulty
-- 🎵 Sound effects & music
-- 📱 Mobile controls
+- ⚔️ Endless 1v1 battles across rounds (first to 2 wins takes the match)
+- 🤖 Difficulty-aware AI (easy / normal / hard) with punish & combo behavior
+- 🎵 Unified Web Audio pipeline (menu BGM, hover SFX, fight BGM, all SFX)
+- 📱 Mobile touch controls with auto-detect / on / off modes
 - 🎨 Simple stickman art
+- 🔧 Debug mode via `?debug` (killswitch + hitbox overlay)
 
 ## 🖥️ Tech Stack
 
-- **Language:** JavaScript
+- **Language:** JavaScript (vanilla ES modules — no build step)
 - **Frontend:** HTML5, CSS3
-- **Canvas:** 2D rendering
+- **Canvas:** 2D rendering, DPR-aware
 
-## 📊 Repo Stats
+## 📁 Structure
 
-- **Files:** 20+
-- **Languages:** ![JavaScript](https://img.shields.io/badge/JavaScript-90%25-yellow) ![HTML](https://img.shields.io/badge/HTML-5%25-orange) ![CSS](https://img.shields.io/badge/CSS-5%25-blue)
-- **License:** MIT
+```
+ai/                 AIController — drives the enemy via a VirtualInput action buffer
+configs/            Central configs: constants, assets manifest, per-character configs
+core/               EventBus, state machine, Game facade, fixed-60Hz GameLoop
+debug/              DebugControls — killswitch (L) + hitbox toggle (B), `?debug` only
+entities/           Fighter FSM + hitboxes, reset across rounds via CharacterFactory
+input/              InputHandler + single key→action map
+render/             Renderer, HUD, overlays, floating text, animation controller
+systems/            CombatSystem (hitboxes/damage) + MatchSystem (rounds/wins)
+ui/                 UIManager (screens via EventBus), SettingsStore, MobileControls
+utils/              AssetLoader, AudioManager (Web Audio, settings-reactive)
+main.js             Composition root — wires SettingsStore → Audio → Game → UI
+```
 
 ## 🕹️ Controls
 
 - **Move:** Arrow keys / A, D
 - **Jump:** W / Up arrow
-- **Attack:** J
-- **Block:** K
+- **Attack:** J (light), U (heavy), I (sweep)
+- **Block:** K (hold)
+- **Pause:** Esc
 - **Mobile:** On-screen buttons
 
 ## 📦 Getting Started
 
 1. Clone or download this repo
-2. Open `index.html` in your browser
+2. Serve the folder over HTTP (e.g. `python -m http.server`) and open it
 3. Play!
+
+> ES modules require an HTTP server — opening `index.html` directly from disk won't work.
 
 ## 🤝 Contributing
 
