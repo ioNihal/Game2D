@@ -1,12 +1,24 @@
-import InputHandler from './controllers/input.js';
+import InputHandler from './input/inputHandler.js';
 import AssetLoader from './utils/assetLoader.js';
 import AudioManager from './utils/audioManager.js';
 import { ANIMATION_CONFIG } from './configs/animationConfig.js';
 import Fighter from './controllers/fighter.js';
 import { CONFIG } from './configs/config.js';
 import { ATTACKS } from './configs/attack.js';
+import { ASSET_MANIFEST } from './configs/assets.js';
 import AIController from './controllers/ai.js';
 import UIManager from './ui.js';
+
+/** Maps UI touch-button labels to semantic actions (UIManager refactors in Phase 5). */
+const VIRTUAL_BUTTONS = {
+    left: 'moveLeft',
+    right: 'moveRight',
+    jump: 'jump',
+    attack: 'lightPunch',
+    heavy: 'heavyPunch',
+    sweep: 'sweepKick',
+    block: 'block',
+};
 
 
 // Canvas setup
@@ -159,32 +171,13 @@ class Game {
     //  Asset loading 
 
     _preloadAssets() {
-        const list = [];
-        for (const [charKey, anims] of Object.entries(ANIMATION_CONFIG)) {
-            for (const [animKey, cfg] of Object.entries(anims)) {
-                for (let i = 1; i <= cfg.frameCount; i++) {
-                    list.push({
-                        key: `${charKey}_${animKey}${i}`,
-                        url: `${cfg.path}${i}${cfg.extension}`,
-                    });
-                }
-            }
-        }
-        this._assetLoader.loadImages(list).catch(err =>
+        this._assetLoader.loadImages(ASSET_MANIFEST.images).catch(err =>
             console.error('[Game] Asset load error:', err)
         );
     }
 
     async _preloadAudio() {
-        const audioList = [
-            { key: 'bgm_fight', urls: ['assets/sfx/bgm/bgm_fight.mp3', 'assets/sfx/bgm/bgm_fight.ogg'] },
-            { key: 'jump', urls: ['assets/sfx/jump/sfx_jump.mp3', 'assets/sfx/jump/sfx_jump.ogg'] },
-            { key: 'punch', urls: ['assets/sfx/punch/sfx_punch.mp3', 'assets/sfx/punch/sfx_punch.ogg'] },
-            { key: 'hit', urls: ['assets/sfx/hit/sfx_hit.mp3', 'assets/sfx/hit/sfx_hit.ogg'] },
-            { key: 'block', urls: ['assets/sfx/block/sfx_block.mp3', 'assets/sfx/block/sfx_block.ogg'] },
-            { key: 'ko', urls: ['assets/sfx/ko/sfx_ko.mp3', 'assets/sfx/ko/sfx_ko.ogg'] },
-        ];
-        await this._audioManager.loadAudioList(audioList).catch(err =>
+        await this._audioManager.loadAudioList(ASSET_MANIFEST.audio).catch(err =>
             console.error('[Game] Audio load error:', err)
         );
     }
@@ -327,19 +320,13 @@ class Game {
 
     //  Mobile virtual input pass-through 
 
-    onVirtualButtonDown(action) { this._input.setVirtualKeyDown(this._actionToCode(action)); }
-    onVirtualButtonUp(action) { this._input.setVirtualKeyUp(this._actionToCode(action)); }
-
-    _actionToCode(action) {
-        return {
-            left: 'ArrowLeft',
-            right: 'ArrowRight',
-            jump: 'ArrowUp',
-            attack: 'KeyJ',
-            heavy: 'KeyU',
-            sweep: 'KeyI',
-            block: 'KeyK',
-        }[action] ?? '';
+    onVirtualButtonDown(label) {
+        const action = VIRTUAL_BUTTONS[label];
+        if (action) this._input.setVirtualDown(action);
+    }
+    onVirtualButtonUp(label) {
+        const action = VIRTUAL_BUTTONS[label];
+        if (action) this._input.setVirtualUp(action);
     }
 
     //  Game loop 

@@ -148,30 +148,30 @@ export default class Fighter {
         this.vx = 0;
         if (!input) return;
 
-        if (input.isKeyJustPressed('KeyL') && this.attackCooldown === 0) {
+        if (input.justPressed('killswitch') && this.attackCooldown === 0) {
             return this.startAttack('killswitch');
         }
-        if (input.isKeyDown('KeyK') && this.onGround) {
+        if (input.isDown('block') && this.onGround) {
             return this.enterState('block');
         }
-        if (input.isKeyDown('ArrowLeft') || input.isKeyDown('KeyA')) {
+        if (input.isDown('moveLeft')) {
             this.facingRight = false;
             return this.enterState('walk');
         }
-        if (input.isKeyDown('ArrowRight') || input.isKeyDown('KeyD')) {
+        if (input.isDown('moveRight')) {
             this.facingRight = true;
             return this.enterState('walk');
         }
-        if ((input.isKeyJustPressed('ArrowUp') || input.isKeyJustPressed('KeyW')) && this.onGround) {
+        if (input.justPressed('jump') && this.onGround) {
             return this.enterState('jump_rise');
         }
-        if (input.isKeyJustPressed('KeyJ') && this.attackCooldown === 0) {
+        if (input.justPressed('lightPunch') && this.attackCooldown === 0) {
             return this.startAttack('lightPunch');
         }
-        if (input.isKeyJustPressed('KeyU') && this.attackCooldown === 0) {
+        if (input.justPressed('heavyPunch') && this.attackCooldown === 0) {
             return this.startAttack('heavyPunch');
         }
-        if (input.isKeyJustPressed('KeyI') && this.attackCooldown === 0) {
+        if (input.justPressed('sweepKick') && this.attackCooldown === 0) {
             return this.startAttack('sweepKick');
         }
     }
@@ -179,60 +179,60 @@ export default class Fighter {
     _stateWalk(input) {
         if (!input) return;
 
-        if (input.isKeyDown('KeyK') && this.onGround) {
+        if (input.isDown('block') && this.onGround) {
             this.vx = 0;
             return this.enterState('block');
         }
-        if (input.isKeyDown('ArrowLeft') || input.isKeyDown('KeyA')) {
+        if (input.isDown('moveLeft')) {
             this.vx = -CONFIG.walkSpeed;
             this.facingRight = false;
-        } else if (input.isKeyDown('ArrowRight') || input.isKeyDown('KeyD')) {
+        } else if (input.isDown('moveRight')) {
             this.vx = CONFIG.walkSpeed;
             this.facingRight = true;
         } else {
             return this.enterState('idle');
         }
-        if ((input.isKeyJustPressed('ArrowUp') || input.isKeyJustPressed('KeyW')) && this.onGround) {
+        if (input.justPressed('jump') && this.onGround) {
             return this.enterState('jump_rise');
         }
-        if (input.isKeyJustPressed('KeyJ') && this.attackCooldown === 0) {
+        if (input.justPressed('lightPunch') && this.attackCooldown === 0) {
             return this.startAttack('lightPunch');
         }
-        if (input.isKeyJustPressed('KeyU') && this.attackCooldown === 0) {
+        if (input.justPressed('heavyPunch') && this.attackCooldown === 0) {
             return this.startAttack('heavyPunch');
         }
     }
 
     _stateJumpRise(input) {
         if (this.vy >= 0) return this.enterState('jump_fall');
-        if (input && input.isKeyJustPressed('KeyJ') && this.attackCooldown === 0) {
+        if (input && input.justPressed('lightPunch') && this.attackCooldown === 0) {
             return this.startAttack('airPunch');
         }
     }
 
     _stateJumpFall(input) {
         if (!input) return;
-        if (input.isKeyDown('ArrowLeft') || input.isKeyDown('KeyA')) {
+        if (input.isDown('moveLeft')) {
             this.vx = -CONFIG.walkSpeed;
             this.facingRight = false;
-        } else if (input.isKeyDown('ArrowRight') || input.isKeyDown('KeyD')) {
+        } else if (input.isDown('moveRight')) {
             this.vx = CONFIG.walkSpeed;
             this.facingRight = true;
         }
-        if (input.isKeyJustPressed('KeyJ') && this.attackCooldown === 0) {
+        if (input.justPressed('lightPunch') && this.attackCooldown === 0) {
             return this.startAttack('airPunch');
         }
     }
 
     _stateBlock(input) {
         this.vx = 0;
-        // AI holds the block for aiBlockTimer frames; player holds while KeyK is down
+        // AI holds the block for aiBlockTimer frames; player holds while block is held
         if (this.aiBlockTimer > 0) return;
-        if (input && !input.isKeyDown('KeyK')) {
-            if (input.isKeyDown('ArrowLeft') || input.isKeyDown('KeyA')) {
+        if (input && !input.isDown('block')) {
+            if (input.isDown('moveLeft')) {
                 this.facingRight = false;
                 this.enterState('walk');
-            } else if (input.isKeyDown('ArrowRight') || input.isKeyDown('KeyD')) {
+            } else if (input.isDown('moveRight')) {
                 this.facingRight = true;
                 this.enterState('walk');
             } else {

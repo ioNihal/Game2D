@@ -1,3 +1,5 @@
+import SettingsStore from './ui/settingsStore.js';
+
 /**
  * UIManager — manages all HTML overlay screens, settings persistence,
  * mobile controls, and button sound effects.
@@ -69,8 +71,13 @@ export default class UIManager {
         // Track which screen opened Settings (so Back returns correctly)
         this._settingsParent = null;
 
-        this._loadSettings();
+        // Settings — single source of truth, persisted + reactive
+        this._settingsStore = new SettingsStore();
+        this._settingsStore.onChange(() => this._applySettings());
+        this._populateFormFromSettings();
+
         this._bindEvents();
+        this._applySettings();
         this._updateMobileControlsVisibility();
 
         window.addEventListener('resize', () => this._updateMobileControlsVisibility());
@@ -80,7 +87,7 @@ export default class UIManager {
 
     /** Returns the currently selected difficulty string. */
     getDifficulty() {
-        return this._difficultySelect?.value ?? 'normal';
+        return this._settingsStore.difficulty;
     }
 
     showMainMenu() {
@@ -166,23 +173,20 @@ export default class UIManager {
         //  Settings 
         this._settingsBackButton?.addEventListener('click', () => this._onSettingsBack());
 
-        this._masterVolumeRange?.addEventListener('input', () => { this._applyVolumes(); this._saveSettings(); });
-        this._musicVolumeRange?.addEventListener('input', () => { this._applyVolumes(); this._saveSettings(); });
-        this._sfxVolumeRange?.addEventListener('input', () => { this._applyVolumes(); this._saveSettings(); });
-        this._muteToggle?.addEventListener('change', () => { this._applyVolumes(); this._saveSettings(); });
-        this._touchToggle?.addEventListener('change', () => { this._saveSettings(); this._updateMobileControlsVisibility(); });
-        this._difficultySelect?.addEventListener('change', () => {
-            this._game.setDifficulty(this._difficultySelect.value);
-            this._saveSettings();
+        this._masterVolumeRange?.addEventListener('input', e =>
+            this._settingsStore.update({ masterVolume: parseFloat(e.target.value) }));
+        this._musicVolumeRange?.addEventListener('input', e =>
+            this._settingsStore.update({ musicVolume: parseFloat(e.target.value) }));
+        this._sfxVolumeRange?.addEventListener('input', e =>
+            this._settingsStore.update({ sfxVolume: parseFloat(e.target.value) }));
+        this._muteToggle?.addEventListener('change', e =>
+            this._settingsStore.update({ muted: e.target.checked }));
+        this._touchToggle?.addEventListener('change', e => {
+            this._settingsStore.update({ touchMode: e.target.value });
+            this._updateMobileControlsVisibility();
         });
-
-        // Splash BGM volume follows master
-        this._masterVolumeRange?.addEventListener('input', () => {
-            this._splashBgm.volume = parseFloat(this._masterVolumeRange.value);
-        });
-        this._muteToggle?.addEventListener('change', () => {
-            this._splashBgm.muted = this._muteToggle.checked;
-        });
+        this._difficultySelect?.addEventListener('change', e =>
+            this._settingsStore.update({ difficulty: e.target.value }));
 
         //  Instructions 
         this._instructionsBackButton?.addEventListener('click', () => {
@@ -272,48 +276,32 @@ export default class UIManager {
         elem.addEventListener('mouseleave', e => { e.preventDefault(); up(); });
     }
 
-    //  Settings persistence 
+    //  Settings — form ↔ store sync 
 
-    _saveSettings() {
-        const s = {
-            masterVolume: parseFloat(this._masterVolumeRange?.value ?? 0.5),
-            musicVolume: parseFloat(this._musicVolumeRange?.value ?? 0.5),
-            sfxVolume: parseFloat(this._sfxVolumeRange?.value ?? 0.5),
-            muted: this._muteToggle?.checked ?? false,
-            touchToggle: this._touchToggle?.value ?? 'auto',
-            difficulty: this._difficultySelect?.value ?? 'normal',
-        };
-        localStorage.setItem('stickmanSettings', JSON.stringify(s));
+    _populateFormFromSettings() {
+        const s = this._settingsStore;
+        if (this._masterVolumeRange) this._masterVolumeRange.value = s.masterVolume;
+        if (this._musicVolumeRange) this._musicVolumeRange.value = s.musicVolume;
+        if (this._sfxVolumeRange) this._sfxVolumeRange.value = s.sfxVolume;
+        if (this._muteToggle) this._muteToggle.checked = s.muted;
+        if (this._touchToggle) this._touchToggle.value = s.touchMode;
+        if (this._difficultySelect) this._difficultySelect.value = s.difficulty;
     }
 
-    _loadSettings() {
-        let s = {};
-        try { s = JSON.parse(localStorage.getItem('stickmanSettings') ?? '{}'); } catch { /* ignore */ }
+    /** Pushes stored settings into the audio pipeline + game. */
+    _applySettings() {
+        const s = this._settingsStore;
+        this._splashBgm.volume = s.masterVolume;
+        this._splashBgm.muted = s.muted;
 
-        if (this._masterVolumeRange) this._masterVolumeRange.value = s.masterVolume ?? 0.5;
-        if (this._musicVolumeRange) this._musicVolumeRange.value = s.musicVolume ?? 0.5;
-        if (this._sfxVolumeRange) this._sfxVolumeRange.value = s.sfxVolume ?? 0.5;
-        if (this._muteToggle) this._muteToggle.checked = s.muted ?? false;
-        if (this._touchToggle) this._touchToggle.value = s.touchToggle ?? 'auto';
-        if (this._difficultySelect) this._difficultySelect.value = s.difficulty ?? 'normal';
-
-        this._splashBgm.volume = parseFloat(this._masterVolumeRange?.value ?? 0.5);
-        this._applyVolumes();
-    }
-
-    _applyVolumes() {
-        const muted = this._muteToggle?.checked ?? false;
-        const masterVol = parseFloat(this._masterVolumeRange?.value ?? 0.5);
-        const musicVol = parseFloat(this._musicVolumeRange?.value ?? 0.5);
-        const sfxVol = parseFloat(this._sfxVolumeRange?.value ?? 0.5);
-
-        if (muted) {
+        if (s.muted) {
             this._game.setMasterVolume(0);
         } else {
-            this._game.setMasterVolume(masterVol);
-            this._game.setMusicVolume(musicVol);
-            this._game.setSFXVolume(sfxVol);
+            this._game.setMasterVolume(s.masterVolume);
+            this._game.setMusicVolume(s.musicVolume);
+            this._game.setSFXVolume(s.sfxVolume);
         }
+        this._game.setDifficulty(s.difficulty);
     }
 
     //  Visibility helpers 
